@@ -8,11 +8,11 @@
 /**
  * Gets an element `id` and enforces that the element is of type `ty`
  * @template ElementType
- * @param {Constructor<ElementType>} ty
  * @param {string} id
+ * @param {Constructor<ElementType>} ty
  * @returns {ElementType}
  */
-function getTypedElementById(ty, id) {
+function getTypedElementById(id, ty) {
     let element = document.getElementById(id);
     if (element == null) { throw new Error(`Element with id ${id} not found!`); }
     if (!(element instanceof ty)) {
@@ -218,12 +218,11 @@ function get_rows(num_rows, rule) {
 
 /**
  * @param {CanvasRenderingContext2D} ctx
- * @param {Row[]} rows 
+ * @param {Row[]} rows
+ * @param {number} x_scale
+ * @param {number} y_scale
  */
-function draw_rows(ctx, rows) {
-    const X_SCALE = 2;
-    const Y_SCALE = 2;
-
+function draw_rows(ctx, rows, x_scale, y_scale) {
     // Set background to black
     // We do this before the translation stuff to make this simple.
     ctx.reset();
@@ -231,13 +230,12 @@ function draw_rows(ctx, rows) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     let half_width = ctx.canvas.width / 2;
-    ctx.scale(X_SCALE, Y_SCALE);
+    ctx.scale(x_scale, y_scale);
     // Translate the origin so that (0, 0) lies at the center-top of the screen
-    ctx.translate(half_width / X_SCALE, 0);
+    ctx.translate(half_width / x_scale, 0);
 
 
     let height = rows.length;
-    let width = unwrap(rows.at(-1)).length;
     for (let y = 0; y < height; y++) {
         let row = rows[y];
         for (let x = row.min_index; x <= row.max_index; x++) {
@@ -249,12 +247,54 @@ function draw_rows(ctx, rows) {
     }
 }
 
+/**
+ * @param {CanvasRenderingContext2D} ctx
+ */
+function render(ctx) {
+    clampRowInput();
 
-let canvas = getTypedElementById(HTMLCanvasElement, 'canvas');
+    let n = parseInt(rule_input.value);
+    let rule = make_rule(n);
+
+    let num_rows = parseInt(row_input.value);
+    let x_scale = parseFloat(x_scale_input.value);
+    let y_scale = parseFloat(y_scale_input.value);
+
+    let rows = get_rows(num_rows, rule);
+    draw_rows(ctx, rows, x_scale, y_scale);
+}
+
+/**
+ * @param {CanvasRenderingContext2D} ctx
+ */
+function actualCanvasHeight(ctx) {
+    let y_scale = parseFloat(y_scale_input.value);
+    return Math.floor(ctx.canvas.height / y_scale);
+}
+
+function clampRowInput() {
+    const actual_canvas_height = actualCanvasHeight(ctx);
+    row_input.max = actual_canvas_height.toString();
+
+    let num_rows = parseInt(row_input.value);
+    if (num_rows > actual_canvas_height) {
+        row_input.value = actual_canvas_height.toString();
+    }
+}
+
+let canvas = getTypedElementById('canvas', HTMLCanvasElement);
 let ctx = unwrap(canvas.getContext("2d"));
 
+let rule_input = getTypedElementById('rule', HTMLInputElement);
+let row_input = getTypedElementById('rows', HTMLInputElement);
+let x_scale_input = getTypedElementById('x-scale', HTMLInputElement);
+let y_scale_input = getTypedElementById('y-scale', HTMLInputElement);
 
-let rule = make_rule(30);
-let rows = get_rows(canvas.height / 2, rule);
+rule_input.addEventListener("input", () => render(ctx));
+x_scale_input.addEventListener("input", () => render(ctx));
+y_scale_input.addEventListener("input", () => render(ctx));
+row_input.addEventListener("input", () => render(ctx));
 
-draw_rows(ctx, rows);
+render(ctx);
+
+
