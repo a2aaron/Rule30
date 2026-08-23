@@ -13,7 +13,7 @@
  * @returns {ElementType}
  */
 function getTypedElementById(id, ty) {
-    let element = document.getElementById(id);
+    const element = document.getElementById(id);
     if (element == null) { throw new Error(`Element with id ${id} not found!`); }
     if (!(element instanceof ty)) {
         throw new Error(`Element with id ${id} is type ${element.constructor.name}, wanted ${ty}`);
@@ -59,7 +59,7 @@ class Row {
      * @returns {Row}
      */
     static create(left, center, right) {
-        let row = new Row();
+        const row = new Row();
         row.left = structuredClone(left);
         row.center = center;
         row.right = structuredClone(right);
@@ -92,10 +92,10 @@ class Row {
         if (index == 0) {
             return this.center;
         } else if (index > 0) {
-            let i = index - 1;
+            const i = index - 1;
             return i < this.right.length ? this.right[i] : false;
         } else {
-            let i = -index - 1;
+            const i = -index - 1;
             return i < this.left.length ? this.left[i] : false;
         }
     }
@@ -109,11 +109,11 @@ class Row {
         if (index == 0) {
             this.center = value;
         } else if (index > 0) {
-            let i = index - 1;
+            const i = index - 1;
             extendToMatchIndex(this.right, i);
             this.right[i] = value;
         } else {
-            let i = -index - 1;
+            const i = -index - 1;
             extendToMatchIndex(this.left, i);
             this.left[i] = value;
         }
@@ -128,9 +128,9 @@ class Row {
                 // eg: If we want to extend so that array[4] is present, and array is currently
                 // 2 elements long (so array[0] and array[1] exist), then we need to add 3 elements
                 // (adding array[2], array[3], and array[4])
-                let amountToExtend = newIndex - array.length + 1;
+                const amountToExtend = newIndex - array.length + 1;
                 /** @type {boolean[]} */
-                let values = Array(amountToExtend).fill(false);
+                const values = Array(amountToExtend).fill(false);
                 array.push(...values);
             }
         }
@@ -164,9 +164,9 @@ function make_rule(n) {
      * @returns {boolean} True if the `i`th bit is 1 and false otherwise
      */
     function get_bit(x, i) {
-        let mask = 1 << i;
-        let masked_x = x & mask;
-        let bit_is_set = masked_x > 0;
+        const mask = 1 << i;
+        const masked_x = x & mask;
+        const bit_is_set = masked_x > 0;
         return bit_is_set
     }
 }
@@ -179,16 +179,16 @@ function make_rule(n) {
  * @returns {Row}
  */
 function apply_rule(row, rule) {
-    let new_row = row.clone();
+    const new_row = row.clone();
 
-    let min = row.min_index - 1;
-    let max = row.max_index + 1;
+    const min = row.min_index - 1;
+    const max = row.max_index + 1;
     for (let i = min; i <= max; i++) {
-        let left = row.get(i - 1);
-        let mid = row.get(i);
-        let right = row.get(i + 1);
+        const left = row.get(i - 1);
+        const mid = row.get(i);
+        const right = row.get(i + 1);
 
-        let cell = rule(left, mid, right);
+        const cell = rule(left, mid, right);
         new_row.set(i, cell);
     }
     return new_row;
@@ -201,15 +201,15 @@ function apply_rule(row, rule) {
  * @returns {Row[]}
  */
 function get_rows(num_rows, rule) {
-    let init = new Row();
+    const init = new Row();
     init.set(0, true);
 
-    let rows = [init];
+    const rows = [init];
 
     // Start at 1 since the initial row is already provided
     for (let i = 1; i < num_rows; i++) {
-        let last_row = unwrap(rows.at(-1));
-        let next_row = apply_rule(last_row, rule);
+        const last_row = unwrap(rows.at(-1));
+        const next_row = apply_rule(last_row, rule);
         rows.push(next_row);
     }
 
@@ -229,18 +229,17 @@ function draw_rows(ctx, rows, x_scale, y_scale) {
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    let half_width = ctx.canvas.width / 2;
+    const half_width = ctx.canvas.width / 2;
     ctx.scale(x_scale, y_scale);
     // Translate the origin so that (0, 0) lies at the center-top of the screen
     ctx.translate(half_width / x_scale, 0);
 
-
-    let height = rows.length;
+    const height = rows.length;
     for (let y = 0; y < height; y++) {
-        let row = rows[y];
+        const row = rows[y];
         for (let x = row.min_index; x <= row.max_index; x++) {
-            let cell = row.get(x);
-            let color = cell ? "white" : "black";
+            const cell = row.get(x);
+            const color = cell ? "white" : "black";
             ctx.fillStyle = color;
             ctx.fillRect(x, y, 1, 1);
         }
@@ -253,14 +252,14 @@ function draw_rows(ctx, rows, x_scale, y_scale) {
 function render(ctx) {
     clampRowInput();
 
-    let n = parseInt(rule_input.value);
-    let rule = make_rule(n);
+    const n = parseInt(rule_input.value);
+    const rule = make_rule(n);
 
-    let num_rows = parseInt(row_input.value);
-    let x_scale = parseFloat(x_scale_input.value);
-    let y_scale = parseFloat(y_scale_input.value);
+    const num_rows = parseInt(row_input.value);
+    const x_scale = parseFloat(x_scale_input.value);
+    const y_scale = parseFloat(y_scale_input.value);
 
-    let rows = get_rows(num_rows, rule);
+    const rows = get_rows(num_rows, rule);
     draw_rows(ctx, rows, x_scale, y_scale);
 }
 
@@ -268,7 +267,7 @@ function render(ctx) {
  * @param {CanvasRenderingContext2D} ctx
  */
 function actualCanvasHeight(ctx) {
-    let y_scale = parseFloat(y_scale_input.value);
+    const y_scale = parseFloat(y_scale_input.value);
     return Math.floor(ctx.canvas.height / y_scale);
 }
 
@@ -276,19 +275,19 @@ function clampRowInput() {
     const actual_canvas_height = actualCanvasHeight(ctx);
     row_input.max = actual_canvas_height.toString();
 
-    let num_rows = parseInt(row_input.value);
+    const num_rows = parseInt(row_input.value);
     if (num_rows > actual_canvas_height) {
         row_input.value = actual_canvas_height.toString();
     }
 }
 
-let canvas = getTypedElementById('canvas', HTMLCanvasElement);
-let ctx = unwrap(canvas.getContext("2d"));
+const canvas = getTypedElementById('canvas', HTMLCanvasElement);
+const ctx = unwrap(canvas.getContext("2d"));
 
-let rule_input = getTypedElementById('rule', HTMLInputElement);
-let row_input = getTypedElementById('rows', HTMLInputElement);
-let x_scale_input = getTypedElementById('x-scale', HTMLInputElement);
-let y_scale_input = getTypedElementById('y-scale', HTMLInputElement);
+const rule_input = getTypedElementById('rule', HTMLInputElement);
+const row_input = getTypedElementById('rows', HTMLInputElement);
+const x_scale_input = getTypedElementById('x-scale', HTMLInputElement);
+const y_scale_input = getTypedElementById('y-scale', HTMLInputElement);
 
 rule_input.addEventListener("input", () => render(ctx));
 x_scale_input.addEventListener("input", () => render(ctx));
