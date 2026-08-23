@@ -150,6 +150,27 @@ function drawRows(ctx, rule, width, height) {
  * @param {CanvasRenderingContext2D} ctx
  */
 function render(ctx) {
+    if (lock_aspect_ratio_input.checked) {
+        canvas_height_input.disabled = true;
+        canvas_height_input.value = canvas_width_input.value;
+    } else {
+        canvas_height_input.disabled = false;
+    }
+
+    ctx.canvas.width = parseInt(canvas_width_input.value);
+    ctx.canvas.height = parseInt(canvas_height_input.value);
+
+    if (locked_to_canvas_input.checked) {
+        width_input.disabled = true;
+        height_input.disabled = true;
+
+        width_input.value = canvas_width_input.value;
+        height_input.value = canvas_height_input.value;
+    } else {
+        width_input.disabled = false;
+        height_input.disabled = false;
+    }
+
     const n = parseInt(rule_input.value);
     const rule = make_rule(n);
 
@@ -165,11 +186,22 @@ const ctx = unwrap(canvas.getContext("2d"));
 const rule_input = getTypedElementById('rule', HTMLInputElement);
 const width_input = getTypedElementById('width', HTMLInputElement);
 const height_input = getTypedElementById('height', HTMLInputElement);
+const locked_to_canvas_input = getTypedElementById('lock-to-canvas', HTMLInputElement);
+const canvas_width_input = getTypedElementById('canvas-width', HTMLInputElement);
+const canvas_height_input = getTypedElementById('canvas-height', HTMLInputElement);
+const lock_aspect_ratio_input = getTypedElementById('lock-aspect-ratio', HTMLInputElement);
 
-rule_input.addEventListener("input", () => render(ctx));
-width_input.addEventListener("input", () => render(ctx));
-height_input.addEventListener("input", () => render(ctx));
+setEventListener(rule_input, width_input, height_input, locked_to_canvas_input, canvas_width_input, canvas_height_input, lock_aspect_ratio_input);
 
 render(ctx);
 
+
+/**
+ * @param {HTMLInputElement[]} elements
+ */
+function setEventListener(...elements) {
+    for (const element of elements) {
+        element.addEventListener("input", () => render(ctx));
+    }
+}
 

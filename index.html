@@ -12,7 +12,7 @@
   <h1>Rule 30</h1>
   <main>
     <div>
-      <canvas id="canvas" height="1000" width="1000" tabindex="1"></canvas>
+      <canvas id="canvas" height="800" width="800" tabindex="1"></canvas>
     </div>
     <ui-grid>
       <h3>Rule Options</h3>
@@ -20,12 +20,26 @@
       <label for="rule" title="Sets the CA rule">Rule</label>
       <input type="number" id="rule" value="30">
 
-      <h3>Canvas Options</h3>
+      <label for="lock-to-canvas" title="If checked, locks the Width and Height controls to the size of the canvas">Lock
+        to Canvas</label>
+      <input type="checkbox" id="lock-to-canvas" checked="true">
+
       <label for="width" title="Sets the cell width">Width</label>
-      <input type="number" id="width" value="1000">
+      <input type="number" id="width" value="800">
 
       <label for="height" title="Sets the cell height">Height</label>
-      <input type="number" id="height" value="1000">
+      <input type="number" id="height" value="800">
+
+      <h3>Canvas Options</h3>
+      <label for="lock-aspect-ratio" title="If checked, locks the aspect ratio of the canvas to be a square">Lock aspect
+        ratio</label>
+      <input type="checkbox" id="lock-aspect-ratio" checked="true">
+
+      <label for="width" title="Sets the canvas width">Canvas Width</label>
+      <input type="number" id="canvas-width" value="800">
+
+      <label for="height" title="Sets the canvas height">Canvas Height</label>
+      <input type="number" id="canvas-height" value="800">
     </ui-grid>
   </main>
 </body>

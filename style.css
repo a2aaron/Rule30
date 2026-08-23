@@ -30,5 +30,6 @@ ui-grid {
 
     label { text-align: right; }
     label::after { content: ":"; }
+    input { justify-self: start; }
     h3 { grid-column: 1 / -1;}
 }
