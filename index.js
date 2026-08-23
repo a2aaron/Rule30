@@ -223,27 +223,38 @@ function get_rows(num_rows, rule) {
  * @param {number} y_scale
  */
 function draw_rows(ctx, rows, x_scale, y_scale) {
-    // Set background to black
-    // We do this before the translation stuff to make this simple.
-    ctx.reset();
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    /**
+     * @param {ImageData} imageData
+     * @param {number} x
+     * @param {number} y
+     * @param {number[]} color
+     */
+    function setPixel(imageData, x, y, color) {
+        const index = (y * imageData.width + x) * 4;
+        imageData.data[index] = color[0]; // red
+        imageData.data[index + 1] = color[1]; // green
+        imageData.data[index + 2] = color[2]; // blue
+        imageData.data[index + 3] = 255; // alpha
+    }
 
-    const half_width = ctx.canvas.width / 2;
-    ctx.scale(x_scale, y_scale);
-    // Translate the origin so that (0, 0) lies at the center-top of the screen
-    ctx.translate(half_width / x_scale, 0);
+    const imageData = ctx.createImageData(ctx.canvas.width, ctx.canvas.height);
+    for (let y = 0; y < imageData.height; y++) {
+        for (let x = 0; x < imageData.width; x++) {
+            const cell_y = Math.floor(y / y_scale);
+            // Currently, x is in canvas space (really "ImageData space" which is not 
+            // affected at all by the canvas transforms)
+            // Hence we must transform this into cell/row space.
+            const distance_from_center = Math.floor((x - imageData.width / 2) / x_scale);
+            const cell_x = distance_from_center;
 
-    const height = rows.length;
-    for (let y = 0; y < height; y++) {
-        const row = rows[y];
-        for (let x = row.min_index; x <= row.max_index; x++) {
-            const cell = row.get(x);
-            const color = cell ? "white" : "black";
-            ctx.fillStyle = color;
-            ctx.fillRect(x, y, 1, 1);
+            const row = rows[cell_y];
+            const cell = row != null ? row.get(cell_x) : false;
+            const color = cell ? [255, 255, 255] : [0, 0, 0];
+
+            setPixel(imageData, x, y, color)
         }
     }
+    ctx.putImageData(imageData, 0, 0)
 }
 
 /**
@@ -263,21 +274,13 @@ function render(ctx) {
     draw_rows(ctx, rows, x_scale, y_scale);
 }
 
-/**
- * @param {CanvasRenderingContext2D} ctx
- */
-function actualCanvasHeight(ctx) {
-    const y_scale = parseFloat(y_scale_input.value);
-    return Math.floor(ctx.canvas.height / y_scale);
-}
-
 function clampRowInput() {
-    const actual_canvas_height = actualCanvasHeight(ctx);
-    row_input.max = actual_canvas_height.toString();
+    const max = 700;
+    row_input.max = max.toString();
 
     const num_rows = parseInt(row_input.value);
-    if (num_rows > actual_canvas_height) {
-        row_input.value = actual_canvas_height.toString();
+    if (num_rows > max) {
+        row_input.value = max.toString();
     }
 }
 
