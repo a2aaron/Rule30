@@ -70,34 +70,12 @@ function make_rule(n) {
 }
 
 /**
- * @param {Rule} rule
- * @param {number} width
- * @param {number} height
- */
-function drawRows(rule, width, height) {
-    drawOffscreenCanvas(width, height, rule);
-    drawFromOffscreenCanvas();
-}
-
-function drawFromOffscreenCanvas() {
-    ONSCREEN_CTX.imageSmoothingEnabled = false;
-    ONSCREEN_CTX.drawImage(OFFSCREEN_CANVAS, 0, 0, ONSCREEN_CTX.canvas.width, ONSCREEN_CTX.canvas.height)
-}
-
-
-const BLACK = [0, 0, 0];
-const WHITE = [255, 255, 255];
-
-/**
  * @param {number} width
  * @param {number} height
  * @param {Rule} rule
  */
-function drawOffscreenCanvas(width, height, rule) {
-    OFFSCREEN_CANVAS.width = width;
-    OFFSCREEN_CANVAS.height = height;
-
-    const imageData = OFFSCREEN_CTX.createImageData(width, height);
+function draw(width, height, rule) {
+    const imageData = CTX.createImageData(width, height);
     // Populate initial row
     for (let x = 0; x < width; x++) {
         if (x == Math.floor(width / 2)) {
@@ -111,8 +89,7 @@ function drawOffscreenCanvas(width, height, rule) {
     for (let y = 1; y < height; y++) {
         renderRow(imageData, y, rule);
     }
-    OFFSCREEN_CTX.putImageData(imageData, 0, 0);
-    return OFFSCREEN_CANVAS;
+    CTX.putImageData(imageData, 0, 0);
 }
 
 /**
@@ -161,12 +138,6 @@ function setPixel(imageData, x, y, color) {
     imageData.data[index + 3] = 255; // alpha
 }
 
-/** @type {OffscreenCanvas } */
-const OFFSCREEN_CANVAS = new OffscreenCanvas(800, 800);
-/** @type {OffscreenCanvasRenderingContext2D } */
-const OFFSCREEN_CTX = unwrap(OFFSCREEN_CANVAS.getContext("2d"));
-
-
 function render() {
     if (lock_aspect_ratio_input.checked) {
         canvas_height_input.disabled = true;
@@ -174,9 +145,6 @@ function render() {
     } else {
         canvas_height_input.disabled = false;
     }
-
-    ONSCREEN_CTX.canvas.width = parseInt(canvas_width_input.value);
-    ONSCREEN_CTX.canvas.height = parseInt(canvas_height_input.value);
 
     if (locked_to_canvas_input.checked) {
         width_input.disabled = true;
@@ -189,17 +157,27 @@ function render() {
         height_input.disabled = false;
     }
 
+
     const n = parseInt(rule_input.value);
     const rule = make_rule(n);
 
     const width = parseFloat(width_input.value);
     const height = parseFloat(height_input.value);
 
-    drawRows(rule, width, height);
+    CTX.canvas.style.width = `${canvas_width_input.value}px`;
+    CTX.canvas.style.height = `${canvas_height_input.value}px`;
+    CTX.canvas.width = width
+    CTX.canvas.height = height
+    CTX.imageSmoothingEnabled = false;
+
+    draw(width, height, rule);
 }
 
-const canvas = getTypedElementById('canvas', HTMLCanvasElement);
-const ONSCREEN_CTX = unwrap(canvas.getContext("2d"));
+const BLACK = [0, 0, 0];
+const WHITE = [255, 255, 255];
+
+const CANVAS = getTypedElementById('canvas', HTMLCanvasElement);
+const CTX = unwrap(CANVAS.getContext("2d"));
 
 const rule_input = getTypedElementById('rule', HTMLInputElement);
 const width_input = getTypedElementById('width', HTMLInputElement);
@@ -210,6 +188,7 @@ const canvas_height_input = getTypedElementById('canvas-height', HTMLInputElemen
 const lock_aspect_ratio_input = getTypedElementById('lock-aspect-ratio', HTMLInputElement);
 
 const play_button = getTypedElementById('play', HTMLButtonElement);
+const reset_button = getTypedElementById('reset', HTMLButtonElement);
 
 
 
@@ -222,6 +201,8 @@ play_button.addEventListener("click", () => {
         play_button.textContent = "Pause";
     }
 });
+
+reset_button.addEventListener("click", () => render())
 setEventListener(rule_input, width_input, height_input, locked_to_canvas_input, canvas_width_input, canvas_height_input, lock_aspect_ratio_input);
 
 render();
@@ -240,15 +221,14 @@ function stopAnimationLoop() {
 function animationLoop() {
     if (ANIMATING) {
         const n = parseInt(rule_input.value);
-        shiftUp(OFFSCREEN_CTX, make_rule(n));
-        drawFromOffscreenCanvas();
+        shiftUp(CTX, make_rule(n));
         requestAnimationFrame(animationLoop);
     }
 }
 
 /**
  * Shifts up the canvas by a single pixel.
- * @param {OffscreenCanvasRenderingContext2D} ctx
+ * @param {CanvasRenderingContext2D} ctx
  * @param {Rule} rule
  */
 function shiftUp(ctx, rule) {
