@@ -70,86 +70,104 @@ function make_rule(n) {
 }
 
 /**
- * @param {CanvasRenderingContext2D} ctx
  * @param {Rule} rule
  * @param {number} width
  * @param {number} height
  */
-function drawRows(ctx, rule, width, height) {
-    /**
-     * @param {number} width
-     * @param {number} height
-     */
-    function drawTempCanvas(width, height) {
-        const tempCanvas = new OffscreenCanvas(width, height);
-        const tempCtx = unwrap(tempCanvas.getContext('2d'));
+function drawRows(rule, width, height) {
+    drawOffscreenCanvas(width, height, rule);
+    drawFromOffscreenCanvas();
+}
 
-        const imageData = tempCtx.createImageData(width, height);
-        // Populate initial row
-        for (let x = 0; x < width; x++) {
-            if (x == Math.floor(width / 2)) {
-                setPixel(imageData, x, 0, WHITE);
-            } else {
-                setPixel(imageData, x, 0, BLACK);
-            }
+function drawFromOffscreenCanvas() {
+    ONSCREEN_CTX.imageSmoothingEnabled = false;
+    ONSCREEN_CTX.drawImage(OFFSCREEN_CANVAS, 0, 0, ONSCREEN_CTX.canvas.width, ONSCREEN_CTX.canvas.height)
+}
+
+
+const BLACK = [0, 0, 0];
+const WHITE = [255, 255, 255];
+
+/**
+ * @param {number} width
+ * @param {number} height
+ * @param {Rule} rule
+ */
+function drawOffscreenCanvas(width, height, rule) {
+    OFFSCREEN_CANVAS.width = width;
+    OFFSCREEN_CANVAS.height = height;
+
+    const imageData = OFFSCREEN_CTX.createImageData(width, height);
+    // Populate initial row
+    for (let x = 0; x < width; x++) {
+        if (x == Math.floor(width / 2)) {
+            setPixel(imageData, x, 0, WHITE);
+        } else {
+            setPixel(imageData, x, 0, BLACK);
         }
-
-        // Draw the rest of the rows
-        for (let y = 1; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const left = getPixel(imageData, x - 1, y - 1);
-                const mid = getPixel(imageData, x, y - 1);
-                const right = getPixel(imageData, x + 1, y - 1);
-
-                const cell = rule(left, mid, right);
-
-                const color = cell ? WHITE : BLACK;
-                setPixel(imageData, x, y, color);
-            }
-        }
-        tempCtx.putImageData(imageData, 0, 0);
-        return tempCanvas;
     }
 
-    /**
-     * @param {ImageData} imageData
-     * @param {number} x
-     * @param {number} y
-     */
-    function getPixel(imageData, x, y) {
-        if (x < 0 || x >= imageData.width) { return false; }
-        if (y < 0 || y >= imageData.height) { return false; }
-
-        const index = (y * imageData.width + x) * 4;
-        return imageData.data[index] == 255;
+    // Draw the rest of the rows
+    for (let y = 1; y < height; y++) {
+        renderRow(imageData, y, rule);
     }
-
-    /**
-     * @param {ImageData} imageData
-     * @param {number} x
-     * @param {number} y
-     * @param {number[]} color
-     */
-    function setPixel(imageData, x, y, color) {
-        const index = (y * imageData.width + x) * 4;
-        imageData.data[index] = color[0]; // red
-        imageData.data[index + 1] = color[1]; // green
-        imageData.data[index + 2] = color[2]; // blue
-        imageData.data[index + 3] = 255; // alpha
-    }
-    const BLACK = [0, 0, 0];
-    const WHITE = [255, 255, 255];
-
-    const tempCanvas = drawTempCanvas(width, height);
-
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(tempCanvas, 0, 0, ctx.canvas.width, ctx.canvas.height)
+    OFFSCREEN_CTX.putImageData(imageData, 0, 0);
+    return OFFSCREEN_CANVAS;
 }
 
 /**
- * @param {CanvasRenderingContext2D} ctx
+ * @param {ImageData} imageData
+ * @param {number} y
+ * @param {Rule} rule
  */
-function render(ctx) {
+function renderRow(imageData, y, rule) {
+    for (let x = 0; x < imageData.width; x++) {
+        const left = getPixel(imageData, x - 1, y - 1);
+        const mid = getPixel(imageData, x, y - 1);
+        const right = getPixel(imageData, x + 1, y - 1);
+
+        const cell = rule(left, mid, right);
+
+        const color = cell ? WHITE : BLACK;
+        setPixel(imageData, x, y, color);
+    }
+}
+
+/**
+ * @param {ImageData} imageData
+ * @param {number} x
+ * @param {number} y
+ * @returns {boolean}
+ */
+function getPixel(imageData, x, y) {
+    if (x < 0 || x >= imageData.width) { return false; }
+    if (y < 0 || y >= imageData.height) { return false; }
+
+    const index = (y * imageData.width + x) * 4;
+    return imageData.data[index] == 255;
+}
+
+/**
+ * @param {ImageData} imageData
+ * @param {number} x
+ * @param {number} y
+ * @param {number[]} color
+ */
+function setPixel(imageData, x, y, color) {
+    const index = (y * imageData.width + x) * 4;
+    imageData.data[index] = color[0]; // red
+    imageData.data[index + 1] = color[1]; // green
+    imageData.data[index + 2] = color[2]; // blue
+    imageData.data[index + 3] = 255; // alpha
+}
+
+/** @type {OffscreenCanvas } */
+const OFFSCREEN_CANVAS = new OffscreenCanvas(800, 800);
+/** @type {OffscreenCanvasRenderingContext2D } */
+const OFFSCREEN_CTX = unwrap(OFFSCREEN_CANVAS.getContext("2d"));
+
+
+function render() {
     if (lock_aspect_ratio_input.checked) {
         canvas_height_input.disabled = true;
         canvas_height_input.value = canvas_width_input.value;
@@ -157,8 +175,8 @@ function render(ctx) {
         canvas_height_input.disabled = false;
     }
 
-    ctx.canvas.width = parseInt(canvas_width_input.value);
-    ctx.canvas.height = parseInt(canvas_height_input.value);
+    ONSCREEN_CTX.canvas.width = parseInt(canvas_width_input.value);
+    ONSCREEN_CTX.canvas.height = parseInt(canvas_height_input.value);
 
     if (locked_to_canvas_input.checked) {
         width_input.disabled = true;
@@ -177,11 +195,11 @@ function render(ctx) {
     const width = parseFloat(width_input.value);
     const height = parseFloat(height_input.value);
 
-    drawRows(ctx, rule, width, height);
+    drawRows(rule, width, height);
 }
 
 const canvas = getTypedElementById('canvas', HTMLCanvasElement);
-const ctx = unwrap(canvas.getContext("2d"));
+const ONSCREEN_CTX = unwrap(canvas.getContext("2d"));
 
 const rule_input = getTypedElementById('rule', HTMLInputElement);
 const width_input = getTypedElementById('width', HTMLInputElement);
@@ -191,17 +209,66 @@ const canvas_width_input = getTypedElementById('canvas-width', HTMLInputElement)
 const canvas_height_input = getTypedElementById('canvas-height', HTMLInputElement);
 const lock_aspect_ratio_input = getTypedElementById('lock-aspect-ratio', HTMLInputElement);
 
+const play_button = getTypedElementById('play', HTMLButtonElement);
+
+
+
+play_button.addEventListener("click", () => {
+    if (ANIMATING) {
+        stopAnimationLoop();
+        play_button.textContent = "Play";
+    } else {
+        startAnimationLoop()
+        play_button.textContent = "Pause";
+    }
+});
 setEventListener(rule_input, width_input, height_input, locked_to_canvas_input, canvas_width_input, canvas_height_input, lock_aspect_ratio_input);
 
-render(ctx);
+render();
 
+let ANIMATING = false;
+function startAnimationLoop() {
+    ANIMATING = true;
+    animationLoop();
+}
+
+function stopAnimationLoop() {
+    ANIMATING = false;
+}
+
+
+function animationLoop() {
+    if (ANIMATING) {
+        const n = parseInt(rule_input.value);
+        shiftUp(OFFSCREEN_CTX, make_rule(n));
+        drawFromOffscreenCanvas();
+        requestAnimationFrame(animationLoop);
+    }
+}
+
+/**
+ * Shifts up the canvas by a single pixel.
+ * @param {OffscreenCanvasRenderingContext2D} ctx
+ * @param {Rule} rule
+ */
+function shiftUp(ctx, rule) {
+    const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+    for (let y = 1; y < imageData.height; y++) {
+        for (let x = 0; x < imageData.width; x++) {
+            const pixel = getPixel(imageData, x, y);
+            setPixel(imageData, x, y - 1, pixel ? WHITE : BLACK);
+        }
+    }
+    renderRow(imageData, ctx.canvas.height - 1, rule);
+    ctx.putImageData(imageData, 0, 0);
+}
 
 /**
  * @param {HTMLInputElement[]} elements
  */
 function setEventListener(...elements) {
     for (const element of elements) {
-        element.addEventListener("input", () => render(ctx));
+        element.addEventListener("input", () => render());
     }
 }
 
