@@ -190,6 +190,7 @@ const lock_aspect_ratio_input = getTypedElementById('lock-aspect-ratio', HTMLInp
 const play_button = getTypedElementById('play', HTMLButtonElement);
 const reset_button = getTypedElementById('reset', HTMLButtonElement);
 
+const speed_input = getTypedElementById('speed', HTMLInputElement);
 
 
 play_button.addEventListener("click", () => {
@@ -208,20 +209,36 @@ setEventListener(rule_input, width_input, height_input, locked_to_canvas_input, 
 render();
 
 let ANIMATING = false;
+// Note: In miliseconds
+/** @type {number | null} */
+let LAST_FRAME = null;
+
 function startAnimationLoop() {
     ANIMATING = true;
+    LAST_FRAME = Date.now();
     animationLoop();
 }
 
 function stopAnimationLoop() {
     ANIMATING = false;
+    LAST_FRAME = null;
 }
 
 
 function animationLoop() {
-    if (ANIMATING) {
+    if (ANIMATING && LAST_FRAME != null) {
+        const currentTime = Date.now();
+        // These are in miliseconds, so divide by 1000 to get seconds.
+        const deltaTime = (currentTime - LAST_FRAME) / 1000;
+        const rowsPerSecond = parseFloat(speed_input.value);
+        const rowsToShift = Math.floor(deltaTime * rowsPerSecond);
+
         const n = parseInt(rule_input.value);
-        shiftUp(CTX, make_rule(n));
+        if (rowsToShift > 0) {
+            shiftUp(CTX, rowsToShift, make_rule(n));
+            // Only record LAST_FRAME if we actually changed anything on the canvas.
+            LAST_FRAME = currentTime;
+        }
         requestAnimationFrame(animationLoop);
     }
 }
@@ -229,17 +246,20 @@ function animationLoop() {
 /**
  * Shifts up the canvas by a single pixel.
  * @param {CanvasRenderingContext2D} ctx
+ * @param {number} amount
  * @param {Rule} rule
  */
-function shiftUp(ctx, rule) {
+function shiftUp(ctx, amount, rule) {
     const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
-    for (let y = 1; y < imageData.height; y++) {
+    for (let y = 0; y < imageData.height - amount; y++) {
         for (let x = 0; x < imageData.width; x++) {
-            const pixel = getPixel(imageData, x, y);
-            setPixel(imageData, x, y - 1, pixel ? WHITE : BLACK);
+            const pixel = getPixel(imageData, x, y + amount);
+            setPixel(imageData, x, y, pixel ? WHITE : BLACK);
         }
     }
-    renderRow(imageData, ctx.canvas.height - 1, rule);
+    for (let y = ctx.canvas.height - amount; y < ctx.canvas.height; y++) {
+        renderRow(imageData, y, rule);
+    }
     ctx.putImageData(imageData, 0, 0);
 }
 
