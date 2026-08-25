@@ -1,13 +1,34 @@
 // @ts-check
 
-/**
- * @template T
- * @typedef {new (...args: any[]) => T} Constructor
- */
+
 
 /***********
  * Helpers *
- ***********/
+ **********/
+
+/**
+ * @template T
+ * @typedef { new (...args: any[]) => T } Constructor
+ */
+
+/**
+ * @param { number } x
+ * @param { number } smoothness
+ * @param { number } inflection_point
+ */
+function smoothStep(x, smoothness, inflection_point) {
+    if (x <= 0.0) { return 0.0; }
+    if (x >= 1.0) { return 1.0; }
+    const c = (1 - smoothness) / (smoothness - 3);
+    if (x <= inflection_point) {
+        const a = x * (1 + c) / (x + inflection_point * c);
+        return x * a ** 2
+    } else {
+        const b = (1 - x) * (1 + c) / ((1 - x) + (1 - inflection_point) * c);
+        return 1 - (1 - x) * (b ** 2);
+    }
+
+}
 
 /**
  * Gets an element `id` and enforces that the element is of type `ty`
@@ -90,8 +111,6 @@ function make_rule(n) {
 
 
 /**
- * @typedef {"off" | "on" | "wrap"} BoundaryCondition
- *
  * @param {ImageData} imageData
  * @param {number} x
  * @param {number} y
@@ -147,19 +166,14 @@ function setPixel(imageData, x, y, color) {
 /**
  * @param {Rule} rule
  * @param {BoundaryCondition} boundary
+ * @param {InitialCondition} initial
  */
-function initialize_canvas(rule, boundary) {
+function initialize_canvas(rule, boundary, initial) {
     const width = CTX.canvas.width;
     const height = CTX.canvas.height;
     const imageData = CTX.createImageData(width, height);
     // Populate initial row
-    for (let x = 0; x < width; x++) {
-        if (x == Math.floor(width / 2)) {
-            setPixel(imageData, x, 0, WHITE);
-        } else {
-            setPixel(imageData, x, 0, BLACK);
-        }
-    }
+    populateRow(imageData, 0, initial);
 
     // Draw the rest of the rows
     for (let y = 1; y < height; y++) {
@@ -168,31 +182,95 @@ function initialize_canvas(rule, boundary) {
     CTX.putImageData(imageData, 0, 0);
 }
 
+/**
+ * @param {ImageData} imageData
+ * @param {number} y
+ * @param {InitialCondition} initial
+ */
+function populateRow(imageData, y, initial) {
+    const width = imageData.width;
+
+    /** @type {(arg0: number) => boolean} */
+    let rule;
+    switch (initial) {
+        case "one_cell_on_center": rule = x => x == Math.floor(width / 2);
+            break;
+        case "one_cell_on_left": rule = x => x == 0;
+            break;
+        case "one_cell_on_right": rule = x => x == width - 1;
+            break;
+        case "random_5": rule = _ => Math.random() < 0.25;
+            break;
+        case "random_25": rule = _ => Math.random() < 0.05;
+            break;
+        case "random_50": rule = _ => Math.random() < 0.50;
+            break;
+        case "random_75": rule = _ => Math.random() < 0.75;
+            break;
+        case "random_95": rule = _ => Math.random() < 0.95;
+            break;
+        case "all_on": rule = _ => true;
+            break;
+        case "all_off": rule = _ => false;
+            break;
+        default:
+            throw new Error("unreachable");
+    }
+    for (let x = 0; x < width; x++) {
+        const color = rule(x) ? WHITE : BLACK;
+        setPixel(imageData, x, y, color);
+    }
+}
+
+/**
+ * @param {ImageData} imageData
+ * @param {number} y
+ * @param {RandomnessType} randomness_type
+ * @param {number} percent
+ */
+function injectRandomness(imageData, y, randomness_type, percent) {
+    for (let x = 0; x < imageData.width; x++) {
+        let color = null;
+        if (Math.random() < percent) {
+            if (randomness_type == "on") { color = WHITE; }
+            else if (randomness_type == "off") { color = BLACK; }
+            else if (randomness_type == "replace") { color = WHITE; }
+            else if (randomness_type == "flip") {
+                var pixel = getPixel(imageData, x, y, "off");
+                color = pixel ? BLACK : WHITE;
+            }
+        } else {
+            if (randomness_type == "replace") { color = BLACK; }
+        }
+
+        if (color != null) {
+            setPixel(imageData, x, y, color);
+        }
+    }
+}
 
 /**
  * Shifts up the canvas by a single pixel.
- * @param {CanvasRenderingContext2D} ctx
+ * @param {ImageData} imageData
  * @param {number} amount
  * @param {Rule} rule
  * @param {BoundaryCondition} boundary
  */
-function shiftUp(ctx, amount, rule, boundary) {
+function shiftUp(imageData, amount, rule, boundary) {
     // Prevent scrolling the entire canvas offscreen
-    if (amount >= ctx.canvas.height) {
-        amount = ctx.canvas.height - 1;
+    if (amount >= imageData.height) {
+        amount = imageData.height - 1;
     }
 
-    const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
     for (let y = 0; y < imageData.height - amount; y++) {
         for (let x = 0; x < imageData.width; x++) {
             const pixel = getPixel(imageData, x, y + amount, boundary);
             setPixel(imageData, x, y, pixel ? WHITE : BLACK);
         }
     }
-    for (let y = ctx.canvas.height - amount; y < ctx.canvas.height; y++) {
+    for (let y = imageData.height - amount; y < imageData.height; y++) {
         renderRow(imageData, y, rule, boundary);
     }
-    ctx.putImageData(imageData, 0, 0);
 }
 
 /**
@@ -221,9 +299,16 @@ function renderRow(imageData, y, rule, boundary) {
 function resetCanvas() {
     CTX.imageSmoothingEnabled = false;
     const boundary = getBoundaryCondition();
+    const initial = getInitialCondition();
     const n = parseInt(rule_input.value);
     const rule = make_rule(n);
-    initialize_canvas(rule, boundary);
+    initialize_canvas(rule, boundary, initial);
+}
+
+function resetIfNotPlaying() {
+    if (!ANIMATING) {
+        resetCanvas();
+    }
 }
 
 function applyControls() {
@@ -271,7 +356,6 @@ function setExternalCanvasSize() {
     CTX.canvas.style.height = `${external_height_input.value}px`;
 }
 
-
 function toggleAnimating() {
     if (ANIMATING) {
         stopAnimationLoop();
@@ -299,18 +383,67 @@ function setSpeedLabel() {
     speedLabel.textContent = `Speed (${rowsPerSecond.toFixed(0)})`
 }
 
+function setRandomnessLabel() {
+    const randomnessLabel = getTypedElementById("randomness-label", HTMLLabelElement);
+    const randomness = getRandomnessAmount() * 100;
+    const label = randomness < 10 ? randomness.toFixed(1) : randomness.toFixed(0);
+    randomnessLabel.textContent = `Randomness (${label}%)`
+}
+
 function getRowsPerSecond() {
     const percent = parseFloat(speed_input.value);
     return (percent ** 4) * CTX.canvas.height * 10;
 }
 
+function getRandomnessAmount() {
+    const percent = parseFloat(randomness_input.value);
+    const smoothed = smoothStep(percent, 2.0, 1.0);
+    return smoothed;
+}
+
 /**
+ * @typedef {"off" | "on" | "wrap"} BoundaryCondition
  * @returns {BoundaryCondition}
  */
 function getBoundaryCondition() {
     const boundary = boundary_dropdown.value;
     if (boundary == "off" || boundary == "on" || boundary == "wrap") {
         return boundary;
+    }
+    throw new Error("unreachable");
+}
+
+/**
+ * @typedef {"one_cell_on_center" | "one_cell_on_left" | "one_cell_on_right" | 
+ * "random_5" | "random_25" | "random_50" | "random_75" | "random_95" |
+ * "all_on" | "all_off"} InitialCondition
+ * @returns {InitialCondition}
+ */
+function getInitialCondition() {
+    const initial = initial_dropdown.value;
+    if (initial == "one_cell_on_center" ||
+        initial == "one_cell_on_left" ||
+        initial == "one_cell_on_right" ||
+        initial == "random_5" ||
+        initial == "random_25" ||
+        initial == "random_50" ||
+        initial == "random_75" ||
+        initial == "random_95" ||
+        initial == "all_on" ||
+        initial == "all_off") {
+        return initial;
+    }
+    throw new Error("unreachable");
+}
+
+/**
+ * @typedef {"on" | "off" | "replace" | "flip"} RandomnessType
+ * @returns {RandomnessType}
+ */
+function getRandomnessType() {
+    const randomnessType = randomness_type_dropdown.value;
+    if (randomnessType == "on" || randomnessType == "off" || randomnessType == "replace" || randomnessType == "flip") {
+        return randomnessType;
     }
     throw new Error("unreachable");
 }
@@ -329,9 +462,20 @@ function animationLoop() {
 
         const n = parseInt(rule_input.value);
         if (rowsToShift > 0) {
+            const imageData = CTX.getImageData(0, 0, CTX.canvas.width, CTX.canvas.height);
+
+            if (ADD_RANDOMNESS) {
+                const percent = getRandomnessAmount();
+                const randomness_type = getRandomnessType();
+                injectRandomness(imageData, imageData.height - 1, randomness_type, percent)
+                ADD_RANDOMNESS = false;
+            }
+
+
+
             const boundary = getBoundaryCondition();
-            console.log(boundary);
-            shiftUp(CTX, rowsToShift, make_rule(n), boundary);
+            shiftUp(imageData, rowsToShift, make_rule(n), boundary);
+            CTX.putImageData(imageData, 0, 0);
             // Only record LAST_FRAME if we actually changed anything on the canvas.
             LAST_FRAME = currentTime;
         }
@@ -343,8 +487,13 @@ let ANIMATING = false;
 // Note: In miliseconds
 /** @type {number | null} */
 let LAST_FRAME = null;
+let ADD_RANDOMNESS = false;
 
+/** @typedef {[number, number, number]} Color */
+
+/** @type {Color} */
 const BLACK = [0, 0, 0];
+/** @type {Color} */
 const WHITE = [255, 255, 255];
 
 const CANVAS = getTypedElementById('canvas', HTMLCanvasElement);
@@ -360,17 +509,28 @@ const lock_aspect_ratio_input = getTypedElementById('lock-aspect-ratio', HTMLInp
 
 const play_button = getTypedElementById('play', HTMLButtonElement);
 const reset_button = getTypedElementById('reset', HTMLButtonElement);
+const randomness_button = getTypedElementById('inject-randomness', HTMLButtonElement);
 
 const speed_input = getTypedElementById('speed', HTMLInputElement);
+const randomness_input = getTypedElementById('randomness-amount', HTMLInputElement);
 
 const boundary_dropdown = getTypedElementById('boundary', HTMLSelectElement);
+const initial_dropdown = getTypedElementById('initial', HTMLSelectElement);
+const randomness_type_dropdown = getTypedElementById('randomness-type', HTMLSelectElement);
 
 play_button.addEventListener("click", toggleAnimating);
-reset_button.addEventListener("click", resetCanvas)
+reset_button.addEventListener("click", resetCanvas);
+randomness_button.addEventListener("click", () => ADD_RANDOMNESS = true)
+
+initial_dropdown.addEventListener('input', resetCanvas);
+rule_input.addEventListener('input', resetIfNotPlaying);
+boundary_dropdown.addEventListener('change', resetIfNotPlaying);
 
 setEventListener(applyControls, lock_aspect_ratio_input, external_width_input, external_height_input, lock_internal_size_input, internal_width_input, internal_height_input);
 setEventListener(setSpeedLabel, lock_internal_size_input, speed_input, internal_height_input);
+setEventListener(setRandomnessLabel, randomness_input);
 
 resetCanvas();
 applyControls();
 setSpeedLabel();
+setRandomnessLabel();

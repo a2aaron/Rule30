@@ -14,7 +14,7 @@ canvas {
 
 ui-grid {
     display: grid;
-    grid-template-columns: max-content fit-content(0);
+    grid-template-columns: 150px fit-content(0);
     align-items: center;
     gap: 0.5em;
     height: max-content;
@@ -23,6 +23,7 @@ ui-grid {
     label::after { content: ":"; }
     input { justify-self: start; }
     h3 { grid-column: 1 / -1;}
+    ui-row { grid-column: 1 / -1; }
     button {
         grid-column: 1 / -1;
         width: fit-content;

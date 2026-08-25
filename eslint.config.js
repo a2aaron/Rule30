@@ -8,6 +8,12 @@ export default defineConfig([
     plugins: { js },
     extends: ["js/recommended"],
     languageOptions: { globals: globals.browser },
-    rules: { "prefer-const": "warn" }
+    rules: {
+      "prefer-const": "warn",
+      "no-unused-vars": ["error", {
+        "varsIgnorePattern": "^_",
+        "argsIgnorePattern": "^_"
+      }]
+    }
   },
 ]);
