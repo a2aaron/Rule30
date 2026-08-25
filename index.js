@@ -5,6 +5,10 @@
  * @typedef {new (...args: any[]) => T} Constructor
  */
 
+/***********
+ * Helpers *
+ ***********/
+
 /**
  * Gets an element `id` and enforces that the element is of type `ty`
  * @template ElementType
@@ -35,6 +39,20 @@ function unwrap(x) {
     }
     return x;
 }
+
+/**
+ * @param {function(): void} listener
+ * @param {HTMLInputElement[]} elements
+ */
+function setEventListener(listener, ...elements) {
+    for (const element of elements) {
+        element.addEventListener("input", () => listener());
+    }
+}
+
+/**********************
+ * CA Logic & Drawing *
+ **********************/
 
 /**
  * Construct rule `n` (eg: rule 30, rule 90, etc)
@@ -69,46 +87,6 @@ function make_rule(n) {
     }
 }
 
-/**
- * @param {Rule} rule
- */
-function initialize_canvas(rule) {
-    const width = CTX.canvas.width;
-    const height = CTX.canvas.height;
-    const imageData = CTX.createImageData(width, height);
-    // Populate initial row
-    for (let x = 0; x < width; x++) {
-        if (x == Math.floor(width / 2)) {
-            setPixel(imageData, x, 0, WHITE);
-        } else {
-            setPixel(imageData, x, 0, BLACK);
-        }
-    }
-
-    // Draw the rest of the rows
-    for (let y = 1; y < height; y++) {
-        renderRow(imageData, y, rule);
-    }
-    CTX.putImageData(imageData, 0, 0);
-}
-
-/**
- * @param {ImageData} imageData
- * @param {number} y
- * @param {Rule} rule
- */
-function renderRow(imageData, y, rule) {
-    for (let x = 0; x < imageData.width; x++) {
-        const left = getPixel(imageData, x - 1, y - 1);
-        const mid = getPixel(imageData, x, y - 1);
-        const right = getPixel(imageData, x + 1, y - 1);
-
-        const cell = rule(left, mid, right);
-
-        const color = cell ? WHITE : BLACK;
-        setPixel(imageData, x, y, color);
-    }
-}
 
 /**
  * @param {ImageData} imageData
@@ -138,138 +116,29 @@ function setPixel(imageData, x, y, color) {
     imageData.data[index + 3] = 255; // alpha
 }
 
-function onInternalCanvasSizeControlsChanged() {
-    if (locked_to_canvas_input.checked) {
-        width_input.disabled = true;
-        height_input.disabled = true;
-
-        width_input.value = canvas_width_input.value;
-        height_input.value = canvas_height_input.value;
-    } else {
-        width_input.disabled = false;
-        height_input.disabled = false;
-    }
-}
-
-function onExternalCanvasSizeControlsChanged() {
-    if (lock_aspect_ratio_input.checked) {
-        canvas_height_input.disabled = true;
-        canvas_height_input.value = canvas_width_input.value;
-    } else {
-        canvas_height_input.disabled = false;
-    }
-}
-
-function resetCanvas() {
-    setExternalCanvasSize();
-    setInternalCanvasSize();
-
-    CTX.imageSmoothingEnabled = false;
-
-    const n = parseInt(rule_input.value);
-    const rule = make_rule(n);
-    initialize_canvas(rule);
-}
-
-function setInternalCanvasSize() {
-    const width = parseFloat(width_input.value);
-    const height = parseFloat(height_input.value);
-    CTX.canvas.width = width;
-    CTX.canvas.height = height;
-}
-
-function setExternalCanvasSize() {
-    CTX.canvas.style.width = `${canvas_width_input.value}px`;
-    CTX.canvas.style.height = `${canvas_height_input.value}px`;
-}
-
-const BLACK = [0, 0, 0];
-const WHITE = [255, 255, 255];
-
-const CANVAS = getTypedElementById('canvas', HTMLCanvasElement);
-const CTX = unwrap(CANVAS.getContext("2d"));
-
-const rule_input = getTypedElementById('rule', HTMLInputElement);
-const width_input = getTypedElementById('width', HTMLInputElement);
-const height_input = getTypedElementById('height', HTMLInputElement);
-const locked_to_canvas_input = getTypedElementById('lock-to-canvas', HTMLInputElement);
-const canvas_width_input = getTypedElementById('canvas-width', HTMLInputElement);
-const canvas_height_input = getTypedElementById('canvas-height', HTMLInputElement);
-const lock_aspect_ratio_input = getTypedElementById('lock-aspect-ratio', HTMLInputElement);
-
-const play_button = getTypedElementById('play', HTMLButtonElement);
-const reset_button = getTypedElementById('reset', HTMLButtonElement);
-
-const speed_input = getTypedElementById('speed', HTMLInputElement);
-
-play_button.addEventListener("click", toggleAnimating);
-
-reset_button.addEventListener("click", resetCanvas)
-
-
-
-setEventListener(onExternalCanvasSizeControlsChanged, lock_aspect_ratio_input, canvas_width_input, canvas_height_input);
-setEventListener(onInternalCanvasSizeControlsChanged, locked_to_canvas_input, width_input, height_input);
-setEventListener(setSpeedLabel, locked_to_canvas_input, speed_input, height_input);
-setEventListener(resetCanvas, width_input, height_input, locked_to_canvas_input);
-setEventListener(setExternalCanvasSize, canvas_width_input, canvas_height_input, lock_aspect_ratio_input);
-
-resetCanvas();
-setSpeedLabel();
-onExternalCanvasSizeControlsChanged();
-onInternalCanvasSizeControlsChanged();
-setExternalCanvasSize();
-
-let ANIMATING = false;
-// Note: In miliseconds
-/** @type {number | null} */
-let LAST_FRAME = null;
-
-function toggleAnimating() {
-    if (ANIMATING) {
-        stopAnimationLoop();
-        play_button.textContent = "Play";
-    } else {
-        startAnimationLoop();
-        play_button.textContent = "Pause";
-    }
-}
-
-function startAnimationLoop() {
-    ANIMATING = true;
-    LAST_FRAME = Date.now();
-    animationLoop();
-}
-
-function stopAnimationLoop() {
-    ANIMATING = false;
-    LAST_FRAME = null;
-}
-
-
-function animationLoop() {
-    if (ANIMATING && LAST_FRAME != null) {
-        const currentTime = Date.now();
-        // These are in miliseconds, so divide by 1000 to get seconds.
-        const deltaTime = (currentTime - LAST_FRAME) / 1000;
-        const rowsPerSecond = getRowsPerSecond();
-        const rowsToShift = Math.floor(deltaTime * rowsPerSecond);
-
-        const n = parseInt(rule_input.value);
-
-        if (rowsToShift > 0) {
-            shiftUp(CTX, rowsToShift, make_rule(n));
-            // Only record LAST_FRAME if we actually changed anything on the canvas.
-            LAST_FRAME = currentTime;
+/**
+ * @param {Rule} rule
+ */
+function initialize_canvas(rule) {
+    const width = CTX.canvas.width;
+    const height = CTX.canvas.height;
+    const imageData = CTX.createImageData(width, height);
+    // Populate initial row
+    for (let x = 0; x < width; x++) {
+        if (x == Math.floor(width / 2)) {
+            setPixel(imageData, x, 0, WHITE);
+        } else {
+            setPixel(imageData, x, 0, BLACK);
         }
-        requestAnimationFrame(animationLoop);
     }
+
+    // Draw the rest of the rows
+    for (let y = 1; y < height; y++) {
+        renderRow(imageData, y, rule);
+    }
+    CTX.putImageData(imageData, 0, 0);
 }
 
-function getRowsPerSecond() {
-    const percent = parseFloat(speed_input.value);
-    return (percent ** 4) * CTX.canvas.height * 10;
-}
 
 /**
  * Shifts up the canvas by a single pixel.
@@ -297,13 +166,93 @@ function shiftUp(ctx, amount, rule) {
 }
 
 /**
- * @param {function(): void} listener
- * @param {HTMLInputElement[]} elements
+ * @param {ImageData} imageData
+ * @param {number} y
+ * @param {Rule} rule
  */
-function setEventListener(listener, ...elements) {
-    for (const element of elements) {
-        element.addEventListener("input", () => listener());
+function renderRow(imageData, y, rule) {
+    for (let x = 0; x < imageData.width; x++) {
+        const left = getPixel(imageData, x - 1, y - 1);
+        const mid = getPixel(imageData, x, y - 1);
+        const right = getPixel(imageData, x + 1, y - 1);
+
+        const cell = rule(left, mid, right);
+
+        const color = cell ? WHITE : BLACK;
+        setPixel(imageData, x, y, color);
     }
+}
+
+/*****************************
+ * Controls & Event Handlers *
+ *****************************/
+function resetCanvas() {
+    CTX.imageSmoothingEnabled = false;
+
+    const n = parseInt(rule_input.value);
+    const rule = make_rule(n);
+    initialize_canvas(rule);
+}
+
+function onInternalCanvasSizeControlsChanged() {
+    if (locked_to_canvas_input.checked) {
+        width_input.disabled = true;
+        height_input.disabled = true;
+
+        width_input.value = canvas_width_input.value;
+        height_input.value = canvas_height_input.value;
+    } else {
+        width_input.disabled = false;
+        height_input.disabled = false;
+    }
+
+    setInternalCanvasSize();
+    resetCanvas();
+}
+
+function setInternalCanvasSize() {
+    const width = parseFloat(width_input.value);
+    const height = parseFloat(height_input.value);
+    CTX.canvas.width = width;
+    CTX.canvas.height = height;
+}
+
+function onExternalCanvasSizeControlsChanged() {
+    if (lock_aspect_ratio_input.checked) {
+        canvas_height_input.disabled = true;
+        canvas_height_input.value = canvas_width_input.value;
+    } else {
+        canvas_height_input.disabled = false;
+    }
+
+    setExternalCanvasSize();
+}
+
+function setExternalCanvasSize() {
+    CTX.canvas.style.width = `${canvas_width_input.value}px`;
+    CTX.canvas.style.height = `${canvas_height_input.value}px`;
+}
+
+
+function toggleAnimating() {
+    if (ANIMATING) {
+        stopAnimationLoop();
+        play_button.textContent = "Play";
+    } else {
+        startAnimationLoop();
+        play_button.textContent = "Pause";
+    }
+}
+
+function startAnimationLoop() {
+    ANIMATING = true;
+    LAST_FRAME = Date.now();
+    animationLoop();
+}
+
+function stopAnimationLoop() {
+    ANIMATING = false;
+    LAST_FRAME = null;
 }
 
 function setSpeedLabel() {
@@ -312,3 +261,67 @@ function setSpeedLabel() {
     speedLabel.textContent = `Speed (${rowsPerSecond.toFixed(0)})`
 }
 
+function getRowsPerSecond() {
+    const percent = parseFloat(speed_input.value);
+    return (percent ** 4) * CTX.canvas.height * 10;
+}
+
+/*************
+ * Animation *
+ *************/
+
+function animationLoop() {
+    if (ANIMATING && LAST_FRAME != null) {
+        const currentTime = Date.now();
+        // These are in miliseconds, so divide by 1000 to get seconds.
+        const deltaTime = (currentTime - LAST_FRAME) / 1000;
+        const rowsPerSecond = getRowsPerSecond();
+        const rowsToShift = Math.floor(deltaTime * rowsPerSecond);
+
+        const n = parseInt(rule_input.value);
+
+        if (rowsToShift > 0) {
+            shiftUp(CTX, rowsToShift, make_rule(n));
+            // Only record LAST_FRAME if we actually changed anything on the canvas.
+            LAST_FRAME = currentTime;
+        }
+        requestAnimationFrame(animationLoop);
+    }
+}
+
+let ANIMATING = false;
+// Note: In miliseconds
+/** @type {number | null} */
+let LAST_FRAME = null;
+
+const BLACK = [0, 0, 0];
+const WHITE = [255, 255, 255];
+
+const CANVAS = getTypedElementById('canvas', HTMLCanvasElement);
+const CTX = unwrap(CANVAS.getContext("2d"));
+
+const rule_input = getTypedElementById('rule', HTMLInputElement);
+const width_input = getTypedElementById('width', HTMLInputElement);
+const height_input = getTypedElementById('height', HTMLInputElement);
+const locked_to_canvas_input = getTypedElementById('lock-to-canvas', HTMLInputElement);
+const canvas_width_input = getTypedElementById('canvas-width', HTMLInputElement);
+const canvas_height_input = getTypedElementById('canvas-height', HTMLInputElement);
+const lock_aspect_ratio_input = getTypedElementById('lock-aspect-ratio', HTMLInputElement);
+
+const play_button = getTypedElementById('play', HTMLButtonElement);
+const reset_button = getTypedElementById('reset', HTMLButtonElement);
+
+const speed_input = getTypedElementById('speed', HTMLInputElement);
+
+play_button.addEventListener("click", toggleAnimating);
+reset_button.addEventListener("click", resetCanvas)
+
+setEventListener(onExternalCanvasSizeControlsChanged, lock_aspect_ratio_input, canvas_width_input, canvas_height_input);
+setEventListener(onInternalCanvasSizeControlsChanged, locked_to_canvas_input, width_input, height_input);
+setEventListener(setSpeedLabel, locked_to_canvas_input, speed_input, height_input);
+
+resetCanvas();
+setSpeedLabel();
+onExternalCanvasSizeControlsChanged();
+onInternalCanvasSizeControlsChanged();
+setExternalCanvasSize();
