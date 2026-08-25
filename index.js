@@ -234,30 +234,30 @@ function applyControls() {
 }
 
 function applyLockedToCanvas() {
-    if (locked_to_canvas_input.checked) {
-        width_input.disabled = true;
-        height_input.disabled = true;
+    if (lock_internal_size_input.checked) {
+        internal_width_input.disabled = true;
+        internal_height_input.disabled = true;
 
-        width_input.value = canvas_width_input.value;
-        height_input.value = canvas_height_input.value;
+        internal_width_input.value = external_width_input.value;
+        internal_height_input.value = external_height_input.value;
     } else {
-        width_input.disabled = false;
-        height_input.disabled = false;
+        internal_width_input.disabled = false;
+        internal_height_input.disabled = false;
     }
 }
 
 function applyLockAspectRatio() {
     if (lock_aspect_ratio_input.checked) {
-        canvas_height_input.disabled = true;
-        canvas_height_input.value = canvas_width_input.value;
+        external_height_input.disabled = true;
+        external_height_input.value = external_width_input.value;
     } else {
-        canvas_height_input.disabled = false;
+        external_height_input.disabled = false;
     }
 }
 
 function setInternalCanvasSize() {
-    const width = parseFloat(width_input.value);
-    const height = parseFloat(height_input.value);
+    const width = parseFloat(internal_width_input.value);
+    const height = parseFloat(internal_height_input.value);
 
     if (CTX.canvas.width != width || CTX.canvas.height != height) {
         CTX.canvas.width = width;
@@ -267,8 +267,8 @@ function setInternalCanvasSize() {
 }
 
 function setExternalCanvasSize() {
-    CTX.canvas.style.width = `${canvas_width_input.value}px`;
-    CTX.canvas.style.height = `${canvas_height_input.value}px`;
+    CTX.canvas.style.width = `${external_width_input.value}px`;
+    CTX.canvas.style.height = `${external_height_input.value}px`;
 }
 
 
@@ -351,11 +351,11 @@ const CANVAS = getTypedElementById('canvas', HTMLCanvasElement);
 const CTX = unwrap(CANVAS.getContext("2d"));
 
 const rule_input = getTypedElementById('rule', HTMLInputElement);
-const width_input = getTypedElementById('width', HTMLInputElement);
-const height_input = getTypedElementById('height', HTMLInputElement);
-const locked_to_canvas_input = getTypedElementById('lock-to-canvas', HTMLInputElement);
-const canvas_width_input = getTypedElementById('canvas-width', HTMLInputElement);
-const canvas_height_input = getTypedElementById('canvas-height', HTMLInputElement);
+const internal_width_input = getTypedElementById('internal-width', HTMLInputElement);
+const internal_height_input = getTypedElementById('internal-height', HTMLInputElement);
+const lock_internal_size_input = getTypedElementById('lock-internal-size', HTMLInputElement);
+const external_width_input = getTypedElementById('external-width', HTMLInputElement);
+const external_height_input = getTypedElementById('external-height', HTMLInputElement);
 const lock_aspect_ratio_input = getTypedElementById('lock-aspect-ratio', HTMLInputElement);
 
 const play_button = getTypedElementById('play', HTMLButtonElement);
@@ -368,8 +368,8 @@ const boundary_dropdown = getTypedElementById('boundary', HTMLSelectElement);
 play_button.addEventListener("click", toggleAnimating);
 reset_button.addEventListener("click", resetCanvas)
 
-setEventListener(applyControls, lock_aspect_ratio_input, canvas_width_input, canvas_height_input, locked_to_canvas_input, width_input, height_input);
-setEventListener(setSpeedLabel, locked_to_canvas_input, speed_input, height_input);
+setEventListener(applyControls, lock_aspect_ratio_input, external_width_input, external_height_input, lock_internal_size_input, internal_width_input, internal_height_input);
+setEventListener(setSpeedLabel, lock_internal_size_input, speed_input, internal_height_input);
 
 resetCanvas();
 applyControls();
