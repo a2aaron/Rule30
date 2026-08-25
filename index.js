@@ -70,11 +70,11 @@ function make_rule(n) {
 }
 
 /**
- * @param {number} width
- * @param {number} height
  * @param {Rule} rule
  */
-function draw(width, height, rule) {
+function initialize_canvas(rule) {
+    const width = CTX.canvas.width;
+    const height = CTX.canvas.height;
     const imageData = CTX.createImageData(width, height);
     // Populate initial row
     for (let x = 0; x < width; x++) {
@@ -138,14 +138,7 @@ function setPixel(imageData, x, y, color) {
     imageData.data[index + 3] = 255; // alpha
 }
 
-function render() {
-    if (lock_aspect_ratio_input.checked) {
-        canvas_height_input.disabled = true;
-        canvas_height_input.value = canvas_width_input.value;
-    } else {
-        canvas_height_input.disabled = false;
-    }
-
+function onInternalCanvasSizeControlsChanged() {
     if (locked_to_canvas_input.checked) {
         width_input.disabled = true;
         height_input.disabled = true;
@@ -156,21 +149,38 @@ function render() {
         width_input.disabled = false;
         height_input.disabled = false;
     }
+}
 
+function onExternalCanvasSizeControlsChanged() {
+    if (lock_aspect_ratio_input.checked) {
+        canvas_height_input.disabled = true;
+        canvas_height_input.value = canvas_width_input.value;
+    } else {
+        canvas_height_input.disabled = false;
+    }
+}
+
+function resetCanvas() {
+    setExternalCanvasSize();
+    setInternalCanvasSize();
+
+    CTX.imageSmoothingEnabled = false;
 
     const n = parseInt(rule_input.value);
     const rule = make_rule(n);
+    initialize_canvas(rule);
+}
 
+function setInternalCanvasSize() {
     const width = parseFloat(width_input.value);
     const height = parseFloat(height_input.value);
+    CTX.canvas.width = width;
+    CTX.canvas.height = height;
+}
 
+function setExternalCanvasSize() {
     CTX.canvas.style.width = `${canvas_width_input.value}px`;
     CTX.canvas.style.height = `${canvas_height_input.value}px`;
-    CTX.canvas.width = width
-    CTX.canvas.height = height
-    CTX.imageSmoothingEnabled = false;
-
-    draw(width, height, rule);
 }
 
 const BLACK = [0, 0, 0];
@@ -192,26 +202,38 @@ const reset_button = getTypedElementById('reset', HTMLButtonElement);
 
 const speed_input = getTypedElementById('speed', HTMLInputElement);
 
+play_button.addEventListener("click", toggleAnimating);
 
-play_button.addEventListener("click", () => {
-    if (ANIMATING) {
-        stopAnimationLoop();
-        play_button.textContent = "Play";
-    } else {
-        startAnimationLoop()
-        play_button.textContent = "Pause";
-    }
-});
+reset_button.addEventListener("click", resetCanvas)
 
-reset_button.addEventListener("click", () => render())
-setEventListener(rule_input, width_input, height_input, locked_to_canvas_input, canvas_width_input, canvas_height_input, lock_aspect_ratio_input);
 
-render();
+
+setEventListener(onExternalCanvasSizeControlsChanged, lock_aspect_ratio_input, canvas_width_input, canvas_height_input);
+setEventListener(onInternalCanvasSizeControlsChanged, locked_to_canvas_input, width_input, height_input);
+setEventListener(setSpeedLabel, locked_to_canvas_input, speed_input, height_input);
+setEventListener(resetCanvas, width_input, height_input, locked_to_canvas_input);
+setEventListener(setExternalCanvasSize, canvas_width_input, canvas_height_input, lock_aspect_ratio_input);
+
+resetCanvas();
+setSpeedLabel();
+onExternalCanvasSizeControlsChanged();
+onInternalCanvasSizeControlsChanged();
+setExternalCanvasSize();
 
 let ANIMATING = false;
 // Note: In miliseconds
 /** @type {number | null} */
 let LAST_FRAME = null;
+
+function toggleAnimating() {
+    if (ANIMATING) {
+        stopAnimationLoop();
+        play_button.textContent = "Play";
+    } else {
+        startAnimationLoop();
+        play_button.textContent = "Pause";
+    }
+}
 
 function startAnimationLoop() {
     ANIMATING = true;
@@ -230,10 +252,11 @@ function animationLoop() {
         const currentTime = Date.now();
         // These are in miliseconds, so divide by 1000 to get seconds.
         const deltaTime = (currentTime - LAST_FRAME) / 1000;
-        const rowsPerSecond = parseFloat(speed_input.value);
+        const rowsPerSecond = getRowsPerSecond();
         const rowsToShift = Math.floor(deltaTime * rowsPerSecond);
 
         const n = parseInt(rule_input.value);
+
         if (rowsToShift > 0) {
             shiftUp(CTX, rowsToShift, make_rule(n));
             // Only record LAST_FRAME if we actually changed anything on the canvas.
@@ -243,6 +266,11 @@ function animationLoop() {
     }
 }
 
+function getRowsPerSecond() {
+    const percent = parseFloat(speed_input.value);
+    return (percent ** 4) * CTX.canvas.height * 10;
+}
+
 /**
  * Shifts up the canvas by a single pixel.
  * @param {CanvasRenderingContext2D} ctx
@@ -250,6 +278,11 @@ function animationLoop() {
  * @param {Rule} rule
  */
 function shiftUp(ctx, amount, rule) {
+    // Prevent scrolling the entire canvas offscreen
+    if (amount >= ctx.canvas.height) {
+        amount = ctx.canvas.height - 1;
+    }
+
     const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
     for (let y = 0; y < imageData.height - amount; y++) {
         for (let x = 0; x < imageData.width; x++) {
@@ -264,11 +297,18 @@ function shiftUp(ctx, amount, rule) {
 }
 
 /**
+ * @param {function(): void} listener
  * @param {HTMLInputElement[]} elements
  */
-function setEventListener(...elements) {
+function setEventListener(listener, ...elements) {
     for (const element of elements) {
-        element.addEventListener("input", () => render());
+        element.addEventListener("input", () => listener());
     }
+}
+
+function setSpeedLabel() {
+    const speedLabel = getTypedElementById("speed-label", HTMLLabelElement);
+    const rowsPerSecond = getRowsPerSecond();
+    speedLabel.textContent = `Speed (${rowsPerSecond.toFixed(0)})`
 }
 
