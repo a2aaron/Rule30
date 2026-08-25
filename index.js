@@ -186,6 +186,7 @@ function renderRow(imageData, y, rule) {
 /*****************************
  * Controls & Event Handlers *
  *****************************/
+
 function resetCanvas() {
     CTX.imageSmoothingEnabled = false;
 
@@ -194,7 +195,14 @@ function resetCanvas() {
     initialize_canvas(rule);
 }
 
-function onInternalCanvasSizeControlsChanged() {
+function applyControls() {
+    applyLockAspectRatio();
+    applyLockedToCanvas();
+    setExternalCanvasSize();
+    setInternalCanvasSize();
+}
+
+function applyLockedToCanvas() {
     if (locked_to_canvas_input.checked) {
         width_input.disabled = true;
         height_input.disabled = true;
@@ -205,27 +213,26 @@ function onInternalCanvasSizeControlsChanged() {
         width_input.disabled = false;
         height_input.disabled = false;
     }
-
-    setInternalCanvasSize();
-    resetCanvas();
 }
 
-function setInternalCanvasSize() {
-    const width = parseFloat(width_input.value);
-    const height = parseFloat(height_input.value);
-    CTX.canvas.width = width;
-    CTX.canvas.height = height;
-}
-
-function onExternalCanvasSizeControlsChanged() {
+function applyLockAspectRatio() {
     if (lock_aspect_ratio_input.checked) {
         canvas_height_input.disabled = true;
         canvas_height_input.value = canvas_width_input.value;
     } else {
         canvas_height_input.disabled = false;
     }
+}
 
-    setExternalCanvasSize();
+function setInternalCanvasSize() {
+    const width = parseFloat(width_input.value);
+    const height = parseFloat(height_input.value);
+
+    if (CTX.canvas.width != width || CTX.canvas.height != height) {
+        CTX.canvas.width = width;
+        CTX.canvas.height = height;
+        resetCanvas();
+    }
 }
 
 function setExternalCanvasSize() {
@@ -316,12 +323,9 @@ const speed_input = getTypedElementById('speed', HTMLInputElement);
 play_button.addEventListener("click", toggleAnimating);
 reset_button.addEventListener("click", resetCanvas)
 
-setEventListener(onExternalCanvasSizeControlsChanged, lock_aspect_ratio_input, canvas_width_input, canvas_height_input);
-setEventListener(onInternalCanvasSizeControlsChanged, locked_to_canvas_input, width_input, height_input);
+setEventListener(applyControls, lock_aspect_ratio_input, canvas_width_input, canvas_height_input, locked_to_canvas_input, width_input, height_input);
 setEventListener(setSpeedLabel, locked_to_canvas_input, speed_input, height_input);
 
 resetCanvas();
+applyControls();
 setSpeedLabel();
-onExternalCanvasSizeControlsChanged();
-onInternalCanvasSizeControlsChanged();
-setExternalCanvasSize();
