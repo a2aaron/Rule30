@@ -88,15 +88,43 @@ function make_rule(n) {
 }
 
 
+
 /**
+ * @typedef {"off" | "on" | "wrap"} BoundaryCondition
+ *
  * @param {ImageData} imageData
  * @param {number} x
  * @param {number} y
+ * @param {BoundaryCondition} boundary
  * @returns {boolean}
  */
-function getPixel(imageData, x, y) {
-    if (x < 0 || x >= imageData.width) { return false; }
-    if (y < 0 || y >= imageData.height) { return false; }
+function getPixel(imageData, x, y, boundary) {
+    /**
+     * @param {number} n
+     * @param {number} mod
+     */
+    function remEuclid(n, mod) {
+        return ((n % mod) + mod) % mod;
+    }
+
+    if (x < 0 || x >= imageData.width) {
+        if (boundary == "off") {
+            return false;
+        } else if (boundary == "on") {
+            return true;
+        } else if (boundary == "wrap") {
+            x = remEuclid(x, imageData.width);
+        }
+    }
+    if (y < 0 || y >= imageData.height) {
+        if (boundary == "off") {
+            return false;
+        } else if (boundary == "on") {
+            return true;
+        } else if (boundary == "wrap") {
+            y = remEuclid(imageData.height, y);
+        }
+    }
 
     const index = (y * imageData.width + x) * 4;
     return imageData.data[index] == 255;
@@ -118,8 +146,9 @@ function setPixel(imageData, x, y, color) {
 
 /**
  * @param {Rule} rule
+ * @param {BoundaryCondition} boundary
  */
-function initialize_canvas(rule) {
+function initialize_canvas(rule, boundary) {
     const width = CTX.canvas.width;
     const height = CTX.canvas.height;
     const imageData = CTX.createImageData(width, height);
@@ -134,7 +163,7 @@ function initialize_canvas(rule) {
 
     // Draw the rest of the rows
     for (let y = 1; y < height; y++) {
-        renderRow(imageData, y, rule);
+        renderRow(imageData, y, rule, boundary);
     }
     CTX.putImageData(imageData, 0, 0);
 }
@@ -145,8 +174,9 @@ function initialize_canvas(rule) {
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} amount
  * @param {Rule} rule
+ * @param {BoundaryCondition} boundary
  */
-function shiftUp(ctx, amount, rule) {
+function shiftUp(ctx, amount, rule, boundary) {
     // Prevent scrolling the entire canvas offscreen
     if (amount >= ctx.canvas.height) {
         amount = ctx.canvas.height - 1;
@@ -155,12 +185,12 @@ function shiftUp(ctx, amount, rule) {
     const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
     for (let y = 0; y < imageData.height - amount; y++) {
         for (let x = 0; x < imageData.width; x++) {
-            const pixel = getPixel(imageData, x, y + amount);
+            const pixel = getPixel(imageData, x, y + amount, boundary);
             setPixel(imageData, x, y, pixel ? WHITE : BLACK);
         }
     }
     for (let y = ctx.canvas.height - amount; y < ctx.canvas.height; y++) {
-        renderRow(imageData, y, rule);
+        renderRow(imageData, y, rule, boundary);
     }
     ctx.putImageData(imageData, 0, 0);
 }
@@ -169,12 +199,13 @@ function shiftUp(ctx, amount, rule) {
  * @param {ImageData} imageData
  * @param {number} y
  * @param {Rule} rule
+ * @param {BoundaryCondition} boundary
  */
-function renderRow(imageData, y, rule) {
+function renderRow(imageData, y, rule, boundary) {
     for (let x = 0; x < imageData.width; x++) {
-        const left = getPixel(imageData, x - 1, y - 1);
-        const mid = getPixel(imageData, x, y - 1);
-        const right = getPixel(imageData, x + 1, y - 1);
+        const left = getPixel(imageData, x - 1, y - 1, boundary);
+        const mid = getPixel(imageData, x, y - 1, boundary);
+        const right = getPixel(imageData, x + 1, y - 1, boundary);
 
         const cell = rule(left, mid, right);
 
@@ -189,10 +220,10 @@ function renderRow(imageData, y, rule) {
 
 function resetCanvas() {
     CTX.imageSmoothingEnabled = false;
-
+    const boundary = getBoundaryCondition();
     const n = parseInt(rule_input.value);
     const rule = make_rule(n);
-    initialize_canvas(rule);
+    initialize_canvas(rule, boundary);
 }
 
 function applyControls() {
@@ -273,6 +304,17 @@ function getRowsPerSecond() {
     return (percent ** 4) * CTX.canvas.height * 10;
 }
 
+/**
+ * @returns {BoundaryCondition}
+ */
+function getBoundaryCondition() {
+    const boundary = boundary_dropdown.value;
+    if (boundary == "off" || boundary == "on" || boundary == "wrap") {
+        return boundary;
+    }
+    throw new Error("unreachable");
+}
+
 /*************
  * Animation *
  *************/
@@ -286,9 +328,10 @@ function animationLoop() {
         const rowsToShift = Math.floor(deltaTime * rowsPerSecond);
 
         const n = parseInt(rule_input.value);
-
         if (rowsToShift > 0) {
-            shiftUp(CTX, rowsToShift, make_rule(n));
+            const boundary = getBoundaryCondition();
+            console.log(boundary);
+            shiftUp(CTX, rowsToShift, make_rule(n), boundary);
             // Only record LAST_FRAME if we actually changed anything on the canvas.
             LAST_FRAME = currentTime;
         }
@@ -319,6 +362,8 @@ const play_button = getTypedElementById('play', HTMLButtonElement);
 const reset_button = getTypedElementById('reset', HTMLButtonElement);
 
 const speed_input = getTypedElementById('speed', HTMLInputElement);
+
+const boundary_dropdown = getTypedElementById('boundary', HTMLSelectElement);
 
 play_button.addEventListener("click", toggleAnimating);
 reset_button.addEventListener("click", resetCanvas)
