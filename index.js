@@ -39,6 +39,19 @@ function clamp(num, min, max) {
 }
 
 /**
+ * Extracts the `i`th bit of `x`
+ * @param {number} x number to extract bits from
+ * @param {number} i index of the bit to get
+ * @returns {boolean} True if the `i`th bit is 1 and false otherwise
+ */
+function get_bit(x, i) {
+    const mask = 1 << i;
+    const masked_x = x & mask;
+    const bit_is_set = masked_x > 0;
+    return bit_is_set
+}
+
+/**
  * Gets an element `id` and enforces that the element is of type `ty`
  * @template ElementType
  * @param {string} id
@@ -100,19 +113,6 @@ function make_rule(n) {
         else if (left && mid && !right) { return get_bit(n, 6); }
         else if (left && mid && right) { return get_bit(n, 7); }
         throw new Error("unreachable!");
-    }
-
-    /**
-     * Extracts the `i`th bit of `x`
-     * @param {number} x number to extract bits from
-     * @param {number} i index of the bit to get
-     * @returns {boolean} True if the `i`th bit is 1 and false otherwise
-     */
-    function get_bit(x, i) {
-        const mask = 1 << i;
-        const masked_x = x & mask;
-        const bit_is_set = masked_x > 0;
-        return bit_is_set
     }
 }
 
@@ -399,6 +399,26 @@ function setRandomnessLabel() {
     randomnessLabel.textContent = `Randomness (${label}%)`
 }
 
+function updateRuleInput() {
+    let rule = 0;
+    for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
+        if (rule_checkboxes[i].checked) {
+            rule += 2 ** i;
+        }
+    }
+    if (parseInt(rule_input.value) != rule) {
+        rule_input.value = rule.toFixed(0);
+        resetIfNotPlaying();
+    }
+}
+
+function updateRuleCheckboxes() {
+    const rule = parseInt(rule_input.value);
+    for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
+        rule_checkboxes[i].checked = get_bit(rule, i);
+    }
+}
+
 function getRowsPerSecond() {
     const percent = parseFloat(speed_input.value);
     return (percent ** 4) * CTX.canvas.height * 10;
@@ -529,6 +549,19 @@ const randomness_input = getTypedElementById('randomness-amount', HTMLInputEleme
 const boundary_dropdown = getTypedElementById('boundary', HTMLSelectElement);
 const initial_dropdown = getTypedElementById('initial', HTMLSelectElement);
 const randomness_type_dropdown = getTypedElementById('randomness-type', HTMLSelectElement);
+
+const NUM_RULE_CHECKBOXES = 8;
+/**
+ * @type {HTMLInputElement[]}
+ */
+const rule_checkboxes = [];
+for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
+    const rule_checkbox = getTypedElementById(`rule-checkbox-${i}`, HTMLInputElement);
+    rule_checkboxes.push(rule_checkbox)
+}
+
+setEventListener(updateRuleInput, ...rule_checkboxes);
+setEventListener(updateRuleCheckboxes, rule_input);
 
 play_button.addEventListener("click", toggleAnimating);
 reset_button.addEventListener("click", resetCanvas);

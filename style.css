@@ -5,7 +5,7 @@ main {
     gap: 1em;
 }
 
-h1 { text-align: center;}
+h1 { text-align: center; }
 
 canvas {
     image-rendering: pixelated;
@@ -20,13 +20,60 @@ ui-grid {
     height: max-content;
 
     label { text-align: right; }
-    label::after { content: ":"; }
+    label:not(checkbox-caption label)::after { content: ":"; }
+    checkbox-caption {
+        display: flex;
+        flex-direction: column;
+        width: fit-content;
+        align-items: center;
+    }
+
+
     input { justify-self: start; }
-    h3 { grid-column: 1 / -1;}
+    h3 {
+        grid-column: 1 / -1;
+        margin-bottom: 0;
+    }
     ui-row { grid-column: 1 / -1; }
     button {
         grid-column: 1 / -1;
         width: fit-content;
+    }
+
+    rule-checkboxes {
+        grid-column: 1 / -1;
+
+        display: flex;
+        flex-direction: column;
+        gap: 1.5em;
+        
+        border: 1px solid black;
+        padding-top: 1.5em;
+        padding-left: 1em;
+        padding-right: 1em;
+        padding-bottom: 1em;
+
+        checkbox-row {
+            display: flex;
+            flex-direction: row;
+            align-self: center;
+            justify-content: space-evenly;
+            gap: 1em;
+            width: 100%;
+
+            rule-diagram {
+                display: flex;
+                gap: 0.1em;
+                rule-box {
+                    display: block;
+                    border: black 1px solid;
+                    width: 1em;
+                    height: 1em;
+                }
+                .on { background-color: white; }
+                .off { background-color: black; }       
+            }
+        }
     }
 }
 
