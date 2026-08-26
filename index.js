@@ -27,7 +27,15 @@ function smoothStep(x, smoothness, inflection_point) {
         const b = (1 - x) * (1 + c) / ((1 - x) + (1 - inflection_point) * c);
         return 1 - (1 - x) * (b ** 2);
     }
+}
 
+/**
+ * @param {number} num
+ * @param {number} min
+ * @param {number} max
+ */
+function clamp(num, min, max) {
+    return Math.min(Math.max(num, min), max);
 }
 
 /**
@@ -341,10 +349,12 @@ function applyLockAspectRatio() {
 }
 
 function setInternalCanvasSize() {
-    const width = parseFloat(internal_width_input.value);
-    const height = parseFloat(internal_height_input.value);
+    let width = parseFloat(internal_width_input.value);
+    let height = parseFloat(internal_height_input.value);
 
-    if (CTX.canvas.width != width || CTX.canvas.height != height) {
+    width = clamp(width, 1, 9999);
+    height = clamp(height, 1, 9999);
+    if ((CTX.canvas.width != width || CTX.canvas.height != height) && !isNaN(width) && !isNaN(height)) {
         CTX.canvas.width = width;
         CTX.canvas.height = height;
         resetCanvas();
@@ -368,8 +378,7 @@ function toggleAnimating() {
 
 function startAnimationLoop() {
     ANIMATING = true;
-    LAST_FRAME = Date.now();
-    animationLoop();
+    requestAnimationFrame(animationLoop);
 }
 
 function stopAnimationLoop() {
@@ -452,11 +461,16 @@ function getRandomnessType() {
  * Animation *
  *************/
 
-function animationLoop() {
-    if (ANIMATING && LAST_FRAME != null) {
-        const currentTime = Date.now();
+/**
+ * @param {number} timestamp 
+ */
+function animationLoop(timestamp) {
+    if (ANIMATING) {
+        if (LAST_FRAME == null) {
+            LAST_FRAME = timestamp;
+        }
         // These are in miliseconds, so divide by 1000 to get seconds.
-        const deltaTime = (currentTime - LAST_FRAME) / 1000;
+        const deltaTime = (timestamp - LAST_FRAME) / 1000;
         const rowsPerSecond = getRowsPerSecond();
         const rowsToShift = Math.floor(deltaTime * rowsPerSecond);
 
@@ -471,13 +485,11 @@ function animationLoop() {
                 ADD_RANDOMNESS = false;
             }
 
-
-
             const boundary = getBoundaryCondition();
             shiftUp(imageData, rowsToShift, make_rule(n), boundary);
             CTX.putImageData(imageData, 0, 0);
             // Only record LAST_FRAME if we actually changed anything on the canvas.
-            LAST_FRAME = currentTime;
+            LAST_FRAME = timestamp;
         }
         requestAnimationFrame(animationLoop);
     }

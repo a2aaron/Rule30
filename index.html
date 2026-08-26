@@ -72,21 +72,24 @@
         internal size</label>
       <input type="checkbox" id="lock-internal-size" checked="true">
 
-      <label for="internal-width" title="Sets the internal width">Internal Width</label>
-      <input type="number" id="internal-width" value="800">
-
-      <label for="internal-height" title="Sets the internal height">Internal Height</label>
-      <input type="number" id="internal-height" value="800">
+      <label title="Sets the internal size">Internal Size</label>
+      <ui-group>
+        <input type="number" id="internal-width" value="800" min="1" max="9999" class="narrow-input">
+        x
+        <input type="number" id="internal-height" value="800" min="1" max="9999" class="narrow-input">
+      </ui-group>
 
       <label for="lock-aspect-ratio" title="If checked, locks the aspect ratio of the external size to be a square">Lock
         aspect ratio</label>
       <input type="checkbox" id="lock-aspect-ratio" checked="true">
 
-      <label for="external-width" title="Sets the external width">External Width</label>
-      <input type="number" id="external-width" value="800">
+      <label for="external-width" title="Sets the external size">External Size</label>
+      <ui-group>
+        <input type="number" id="external-width" value="800" min="1" max="9999" class="narrow-input">
+        x
+        <input type="number" id="external-height" value="800" min="1" max="9999" class="narrow-input">
+      </ui-group>
 
-      <label for="external-height" title="Sets the external height">External Height</label>
-      <input type="number" id="external-height" value="800">
     </ui-grid>
   </main>
 </body>

@@ -29,3 +29,7 @@ ui-grid {
         width: fit-content;
     }
 }
+
+.narrow-input {
+    width: 8ch;
+}
