@@ -412,6 +412,13 @@ function setRandomnessLabel() {
     randomnessLabel.textContent = `Randomness (${label}%)`
 }
 
+function randomizeRule() {
+    const rule = Math.floor(Math.random() * 256);
+    rule_input.value = rule.toFixed(0);
+    resetIfNotPlaying();
+    updateRuleCheckboxes();
+}
+
 function updateRuleInput() {
     let rule = 0;
     for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
@@ -560,7 +567,8 @@ const lock_aspect_ratio_input = getTypedElementById('lock-aspect-ratio', HTMLInp
 
 const play_button = getTypedElementById('play', HTMLButtonElement);
 const reset_button = getTypedElementById('reset', HTMLButtonElement);
-const randomness_button = getTypedElementById('inject-randomness', HTMLButtonElement);
+const inject_randomness_button = getTypedElementById('inject-randomness', HTMLButtonElement);
+const randomize_rule_button = getTypedElementById('randomize-rule', HTMLButtonElement);
 
 const speed_input = getTypedElementById('speed', HTMLInputElement);
 const randomness_input = getTypedElementById('randomness-amount', HTMLInputElement);
@@ -584,7 +592,8 @@ setEventListener(updateRuleCheckboxes, rule_input);
 
 play_button.addEventListener("click", toggleAnimating);
 reset_button.addEventListener("click", resetCanvas);
-randomness_button.addEventListener("click", () => ADD_RANDOMNESS = true)
+inject_randomness_button.addEventListener("click", () => ADD_RANDOMNESS = true)
+randomize_rule_button.addEventListener("click", randomizeRule);
 
 initial_dropdown.addEventListener('input', resetCanvas);
 rule_input.addEventListener('input', resetIfNotPlaying);
