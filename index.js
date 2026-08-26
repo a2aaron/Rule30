@@ -439,6 +439,21 @@ function updateRuleCheckboxes() {
     }
 }
 
+async function copyCanvasToClipboard() {
+    canvas.toBlob(async (blob) => {
+        if (!blob) {
+            console.error("Could not convert canvas to blob?");
+            return;
+        }
+
+        const item = new ClipboardItem({ [blob.type]: blob });
+        await navigator.clipboard.write([item]);
+    }, 'image/png');
+    copied_to_clipboard_message.classList.remove("animate-fade");
+    void copied_to_clipboard_message.offsetWidth;
+    copied_to_clipboard_message.classList.add("animate-fade");
+}
+
 function getRowsPerSecond() {
     const percent = parseFloat(speed_input.value);
     return (percent ** 4) * CTX.canvas.height * 10;
@@ -554,8 +569,8 @@ const BLACK = [0, 0, 0];
 /** @type {Color} */
 const WHITE = [255, 255, 255];
 
-const CANVAS = getTypedElementById('canvas', HTMLCanvasElement);
-const CTX = unwrap(CANVAS.getContext("2d"));
+const canvas = getTypedElementById('canvas', HTMLCanvasElement);
+const CTX = unwrap(canvas.getContext("2d"));
 
 const rule_input = getTypedElementById('rule', HTMLInputElement);
 const internal_width_input = getTypedElementById('internal-width', HTMLInputElement);
@@ -576,6 +591,8 @@ const randomness_input = getTypedElementById('randomness-amount', HTMLInputEleme
 const boundary_dropdown = getTypedElementById('boundary', HTMLSelectElement);
 const initial_dropdown = getTypedElementById('initial', HTMLSelectElement);
 const randomness_type_dropdown = getTypedElementById('randomness-type', HTMLSelectElement);
+
+const copied_to_clipboard_message = getTypedElementById('copied-to-clipboard-message', HTMLParagraphElement);
 
 const NUM_RULE_CHECKBOXES = 8;
 /**
@@ -598,6 +615,8 @@ randomize_rule_button.addEventListener("click", randomizeRule);
 initial_dropdown.addEventListener('input', resetCanvas);
 rule_input.addEventListener('input', resetIfNotPlaying);
 boundary_dropdown.addEventListener('change', resetIfNotPlaying);
+
+canvas.addEventListener('click', copyCanvasToClipboard);
 
 setEventListener(applyControls, lock_aspect_ratio_input, external_width_input, external_height_input, lock_internal_size_input, internal_width_input, internal_height_input);
 setEventListener(setSpeedLabel, lock_internal_size_input, speed_input, internal_height_input);

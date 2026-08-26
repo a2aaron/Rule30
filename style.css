@@ -75,8 +75,27 @@ ui-grid {
             }
         }
     }
+
+    .narrow-input { width: 8ch; }
 }
 
-.narrow-input {
-    width: 8ch;
+#copied-to-clipboard-message {
+    color: black;
+    background-color: rgb(229, 255, 229);
+    width: fit-content;
+    padding: 10px;
+    border: 2px green solid;
+    border-radius: 50px;
+    text-align: center;
+    opacity: 0;
 }
+
+.animate-fade {
+    animation: fade 0.75s linear(0, 0.2, 0.2, 1) forwards;
+}
+@keyframes fade {
+  0% { opacity: 1; display: block; }
+  99% { opacity: 0; display: block; }
+  100% { opacity: 0; display: none; }
+}
+

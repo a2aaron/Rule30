@@ -13,6 +13,7 @@
   <main>
     <div>
       <canvas id="canvas" height="800" width="800" tabindex="1"></canvas>
+      <p id="copied-to-clipboard-message">Copied to clipboard</p>
     </div>
     <ui-grid>
       <ui-row>
@@ -152,9 +153,9 @@
 
       <label title="Sets the internal size">Internal Size</label>
       <ui-group>
-        <input type="number" id="internal-width" value="800" min="1" max="9999" class="narrow-input">
+        <input type="number" id="internal-width" value="300" min="1" max="9999" class="narrow-input">
         x
-        <input type="number" id="internal-height" value="800" min="1" max="9999" class="narrow-input">
+        <input type="number" id="internal-height" value="300" min="1" max="9999" class="narrow-input">
       </ui-group>
 
       <label for="lock-aspect-ratio" title="If checked, locks the aspect ratio of the external size to be a square">Lock
@@ -163,9 +164,9 @@
 
       <label for="external-width" title="Sets the external size">External Size</label>
       <ui-group>
-        <input type="number" id="external-width" value="800" min="1" max="9999" class="narrow-input">
+        <input type="number" id="external-width" value="900" min="1" max="9999" class="narrow-input">
         x
-        <input type="number" id="external-height" value="800" min="1" max="9999" class="narrow-input">
+        <input type="number" id="external-height" value="900" min="1" max="9999" class="narrow-input">
       </ui-group>
 
     </ui-grid>
