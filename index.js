@@ -111,8 +111,7 @@ function make_rule(n) {
         else if (left && !mid && !right) { return get_bit(n, 4); }
         else if (left && !mid && right) { return get_bit(n, 5); }
         else if (left && mid && !right) { return get_bit(n, 6); }
-        else if (left && mid && right) { return get_bit(n, 7); }
-        throw new Error("unreachable!");
+        else { return get_bit(n, 7); }
     }
 }
 
@@ -207,6 +206,22 @@ function populateRow(imageData, y, initial) {
             break;
         case "one_cell_on_right": rule = x => x == width - 1;
             break;
+        case "one_cell_on_random": {
+            const cell = Math.floor(Math.random() * width);
+            rule = x => x == cell;
+            break;
+        }
+        case "one_cell_off_center": rule = x => x != Math.floor(width / 2);
+            break;
+        case "one_cell_off_left": rule = x => x != 0;
+            break;
+        case "one_cell_off_right": rule = x => x != width - 1;
+            break;
+        case "one_cell_off_random": {
+            const cell = Math.floor(Math.random() * width);
+            rule = x => x != cell;
+            break;
+        }
         case "random_5": rule = _ => Math.random() < 0.25;
             break;
         case "random_25": rule = _ => Math.random() < 0.05;
@@ -221,8 +236,6 @@ function populateRow(imageData, y, initial) {
             break;
         case "all_off": rule = _ => false;
             break;
-        default:
-            throw new Error("unreachable");
     }
     for (let x = 0; x < width; x++) {
         const color = rule(x) ? WHITE : BLACK;
@@ -443,7 +456,8 @@ function getBoundaryCondition() {
 }
 
 /**
- * @typedef {"one_cell_on_center" | "one_cell_on_left" | "one_cell_on_right" | 
+ * @typedef { "one_cell_on_center" | "one_cell_on_left" | "one_cell_on_right" | "one_cell_on_random" |
+ * "one_cell_off_center" | "one_cell_off_left" | "one_cell_off_right" | "one_cell_off_random" |
  * "random_5" | "random_25" | "random_50" | "random_75" | "random_95" |
  * "all_on" | "all_off"} InitialCondition
  * @returns {InitialCondition}
@@ -453,6 +467,11 @@ function getInitialCondition() {
     if (initial == "one_cell_on_center" ||
         initial == "one_cell_on_left" ||
         initial == "one_cell_on_right" ||
+        initial == "one_cell_on_random" ||
+        initial == "one_cell_off_center" ||
+        initial == "one_cell_off_left" ||
+        initial == "one_cell_off_right" ||
+        initial == "one_cell_off_random" ||
         initial == "random_5" ||
         initial == "random_25" ||
         initial == "random_50" ||
