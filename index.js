@@ -52,6 +52,17 @@ function get_bit(x, i) {
 }
 
 /**
+ * @param {boolean[]} bits
+ */
+function from_bits(...bits) {
+    let rule = 0;
+    for (var i = 0; i < bits.length; i++) {
+        rule += bits[i] ? 2 ** i : 0;
+    }
+    return rule;
+}
+
+/**
  * Gets an element `id` and enforces that the element is of type `ty`
  * @template ElementType
  * @param {string} id
@@ -321,7 +332,7 @@ function resetCanvas() {
     CTX.imageSmoothingEnabled = false;
     const boundary = getBoundaryCondition();
     const initial = getInitialCondition();
-    const n = parseInt(rule_input.value);
+    const n = getRule();
     const rule = make_rule(n);
     initialize_canvas(rule, boundary, initial);
 }
@@ -419,6 +430,62 @@ function randomizeRule() {
     updateRuleCheckboxes();
 }
 
+function flipRule() {
+    // Exchanges bits 1 and 4 as well as 3 and 6
+    // (which exchanges FFT <-> TFF and FTT <-> TTF)
+    const rule = getRule();
+    const bit0 = get_bit(rule, 0); // FFF
+    const bit1 = get_bit(rule, 1); // FFT, exchange with bit 4
+    const bit2 = get_bit(rule, 2); // FTF
+    const bit3 = get_bit(rule, 3); // FTT, exchange with bit 6
+    const bit4 = get_bit(rule, 4); // TFF, exchange with bit 1
+    const bit5 = get_bit(rule, 5); // TFT
+    const bit6 = get_bit(rule, 6); // TTF, exchange with bit 3
+    const bit7 = get_bit(rule, 7); // TTT
+    const newRule = from_bits(bit0, bit4, bit2, bit6, bit1, bit5, bit3, bit7);
+
+    rule_input.value = newRule.toFixed(0);
+    resetIfNotPlaying();
+    updateRuleCheckboxes();
+}
+
+function complementRule() {
+    // Reverses and bitwise NOTs all the bits
+    // This is equivalent to inverting what false and true means for the whole rule.
+    const rule = getRule();
+    const bit0 = get_bit(rule, 0); // FFF, exchange with bit 7
+    const bit1 = get_bit(rule, 1); // FFT, exchange with bit 6
+    const bit2 = get_bit(rule, 2); // FTF, exchange with bit 5
+    const bit3 = get_bit(rule, 3); // FTT, exchange with bit 4
+    const bit4 = get_bit(rule, 4); // TFF, exchange with bit 3
+    const bit5 = get_bit(rule, 5); // TFT, exchange with bit 2
+    const bit6 = get_bit(rule, 6); // TTF, exchange with bit 1
+    const bit7 = get_bit(rule, 7); // TTT, exchange with bit 0
+    const newRule = from_bits(!bit7, !bit6, !bit5, !bit4, !bit3, !bit2, !bit1, !bit0);
+
+    rule_input.value = newRule.toFixed(0);
+    resetIfNotPlaying();
+    updateRuleCheckboxes();
+}
+
+function invertRule() {
+    // Bitwise NOTs all the bits
+    const rule = getRule();
+    const bit0 = get_bit(rule, 0); // FFF, exchange with bit 7
+    const bit1 = get_bit(rule, 1); // FFT, exchange with bit 6
+    const bit2 = get_bit(rule, 2); // FTF, exchange with bit 5
+    const bit3 = get_bit(rule, 3); // FTT, exchange with bit 4
+    const bit4 = get_bit(rule, 4); // TFF, exchange with bit 3
+    const bit5 = get_bit(rule, 5); // TFT, exchange with bit 2
+    const bit6 = get_bit(rule, 6); // TTF, exchange with bit 1
+    const bit7 = get_bit(rule, 7); // TTT, exchange with bit 0
+    const newRule = from_bits(!bit0, !bit1, !bit2, !bit3, !bit4, !bit5, !bit6, !bit7);
+
+    rule_input.value = newRule.toFixed(0);
+    resetIfNotPlaying();
+    updateRuleCheckboxes();
+}
+
 function updateRuleInput() {
     let rule = 0;
     for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
@@ -426,14 +493,14 @@ function updateRuleInput() {
             rule += 2 ** i;
         }
     }
-    if (parseInt(rule_input.value) != rule) {
+    if (getRule() != rule) {
         rule_input.value = rule.toFixed(0);
         resetIfNotPlaying();
     }
 }
 
 function updateRuleCheckboxes() {
-    const rule = parseInt(rule_input.value);
+    const rule = getRule();
     for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
         rule_checkboxes[i].checked = get_bit(rule, i);
     }
@@ -450,8 +517,12 @@ async function copyCanvasToClipboard() {
         await navigator.clipboard.write([item]);
     }, 'image/png');
     copied_to_clipboard_message.classList.remove("animate-fade");
-    void copied_to_clipboard_message.offsetWidth;
+    void copied_to_clipboard_message.offsetWidth; // Required to make the animation actually trigger
     copied_to_clipboard_message.classList.add("animate-fade");
+}
+
+function getRule() {
+    return parseInt(rule_input.value);
 }
 
 function getRowsPerSecond() {
@@ -535,7 +606,7 @@ function animationLoop(timestamp) {
         const rowsPerSecond = getRowsPerSecond();
         const rowsToShift = Math.floor(deltaTime * rowsPerSecond);
 
-        const n = parseInt(rule_input.value);
+        const n = getRule();
         if (rowsToShift > 0) {
             const imageData = CTX.getImageData(0, 0, CTX.canvas.width, CTX.canvas.height);
 
@@ -584,6 +655,9 @@ const play_button = getTypedElementById('play', HTMLButtonElement);
 const reset_button = getTypedElementById('reset', HTMLButtonElement);
 const inject_randomness_button = getTypedElementById('inject-randomness', HTMLButtonElement);
 const randomize_rule_button = getTypedElementById('randomize-rule', HTMLButtonElement);
+const flip_rule_button = getTypedElementById('flip-rule', HTMLButtonElement);
+const completement_rule_button = getTypedElementById('complement-rule', HTMLButtonElement);
+const invert_rule_button = getTypedElementById('invert-rule', HTMLButtonElement);
 
 const speed_input = getTypedElementById('speed', HTMLInputElement);
 const randomness_input = getTypedElementById('randomness-amount', HTMLInputElement);
@@ -610,7 +684,11 @@ setEventListener(updateRuleCheckboxes, rule_input);
 play_button.addEventListener("click", toggleAnimating);
 reset_button.addEventListener("click", resetCanvas);
 inject_randomness_button.addEventListener("click", () => ADD_RANDOMNESS = true)
+
 randomize_rule_button.addEventListener("click", randomizeRule);
+flip_rule_button.addEventListener("click", flipRule);
+completement_rule_button.addEventListener("click", complementRule);
+invert_rule_button.addEventListener("click", invertRule);
 
 initial_dropdown.addEventListener('input', resetCanvas);
 rule_input.addEventListener('input', resetIfNotPlaying);
