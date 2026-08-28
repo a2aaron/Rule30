@@ -103,9 +103,85 @@ function setEventListener(listener, ...elements) {
     }
 }
 
-/**********************
- * CA Logic & Drawing *
- **********************/
+
+
+
+/************
+ * CA Logic *
+ ************/
+
+class Board {
+    /**
+     * @param {number} width
+     * @param {number} height
+     */
+    constructor(width, height) {
+        this.width = width;
+        this.height = height;
+        this.board = [];
+        for (let y = 0; y < height; y++) {
+            const row = [];
+            for (let x = 0; x < width; x++) {
+                row.push(false);
+            }
+            this.board.push(row);
+        }
+    }
+
+
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {BoundaryCondition} [boundary]
+     * @returns {boolean}
+     */
+    getCell(x, y, boundary) {
+        /**
+         * @param {number} n
+         * @param {number} mod
+         */
+        function remEuclid(n, mod) {
+            return ((n % mod) + mod) % mod;
+        }
+
+        if (x < 0 || x >= this.width) {
+            if (boundary === undefined) {
+                throw new Error(`x-coordinate ${x} is outside board size (width = ${this.width})`);
+            } else if (boundary == "off") {
+                return false;
+            } else if (boundary == "on") {
+                return true;
+            } else if (boundary == "wrap") {
+                x = remEuclid(x, this.width);
+            }
+        }
+        if (y < 0 || y >= this.height) {
+            if (boundary === undefined) {
+                throw new Error(`y-coordinate ${y} is outside board size (height = ${this.height})`);
+            }
+            else if (boundary == "off") {
+                return false;
+            } else if (boundary == "on") {
+                return true;
+            } else if (boundary == "wrap") {
+                y = remEuclid(this.height, y);
+            }
+        }
+
+        return this.board[y][x];
+    }
+
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {boolean} value
+     */
+    setCell(x, y, value) {
+        this.board[y][x] = value;
+    }
+}
+
+
 
 /**
  * Construct rule `n` (eg: rule 30, rule 90, etc)
@@ -127,86 +203,29 @@ function make_rule(n) {
 }
 
 
-
 /**
- * @param {ImageData} imageData
- * @param {number} x
- * @param {number} y
- * @param {BoundaryCondition} boundary
- * @returns {boolean}
- */
-function getPixel(imageData, x, y, boundary) {
-    /**
-     * @param {number} n
-     * @param {number} mod
-     */
-    function remEuclid(n, mod) {
-        return ((n % mod) + mod) % mod;
-    }
-
-    if (x < 0 || x >= imageData.width) {
-        if (boundary == "off") {
-            return false;
-        } else if (boundary == "on") {
-            return true;
-        } else if (boundary == "wrap") {
-            x = remEuclid(x, imageData.width);
-        }
-    }
-    if (y < 0 || y >= imageData.height) {
-        if (boundary == "off") {
-            return false;
-        } else if (boundary == "on") {
-            return true;
-        } else if (boundary == "wrap") {
-            y = remEuclid(imageData.height, y);
-        }
-    }
-
-    const index = (y * imageData.width + x) * 4;
-    return imageData.data[index] == 255;
-}
-
-/**
- * @param {ImageData} imageData
- * @param {number} x
- * @param {number} y
- * @param {number[]} color
- */
-function setPixel(imageData, x, y, color) {
-    const index = (y * imageData.width + x) * 4;
-    imageData.data[index] = color[0]; // red
-    imageData.data[index + 1] = color[1]; // green
-    imageData.data[index + 2] = color[2]; // blue
-    imageData.data[index + 3] = 255; // alpha
-}
-
-/**
+ * @param {Board} board
  * @param {Rule} rule
  * @param {BoundaryCondition} boundary
  * @param {InitialCondition} initial
  */
-function initialize_canvas(rule, boundary, initial) {
-    const width = CTX.canvas.width;
-    const height = CTX.canvas.height;
-    const imageData = CTX.createImageData(width, height);
+function initialize_board(board, rule, boundary, initial) {
     // Populate initial row
-    populateRow(imageData, 0, initial);
+    populateRow(board, 0, initial);
 
     // Draw the rest of the rows
-    for (let y = 1; y < height; y++) {
-        renderRow(imageData, y, rule, boundary);
+    for (let y = 1; y < board.height; y++) {
+        computeRow(board, y, rule, boundary);
     }
-    CTX.putImageData(imageData, 0, 0);
 }
 
 /**
- * @param {ImageData} imageData
+ * @param {Board} board
  * @param {number} y
  * @param {InitialCondition} initial
  */
-function populateRow(imageData, y, initial) {
-    const width = imageData.width;
+function populateRow(board, y, initial) {
+    const width = board.width;
 
     /** @type {(arg0: number) => boolean} */
     let rule;
@@ -249,79 +268,116 @@ function populateRow(imageData, y, initial) {
             break;
     }
     for (let x = 0; x < width; x++) {
-        const color = rule(x) ? WHITE : BLACK;
-        setPixel(imageData, x, y, color);
+        const value = rule(x);
+        board.setCell(x, y, value);
     }
 }
 
 /**
- * @param {ImageData} imageData
+ * @param {Board} board
  * @param {number} y
  * @param {RandomnessType} randomness_type
  * @param {number} percent
  */
-function injectRandomness(imageData, y, randomness_type, percent) {
-    for (let x = 0; x < imageData.width; x++) {
-        let color = null;
+function injectRandomness(board, y, randomness_type, percent) {
+    for (let x = 0; x < board.width; x++) {
+        let value = null;
         if (Math.random() < percent) {
-            if (randomness_type == "on") { color = WHITE; }
-            else if (randomness_type == "off") { color = BLACK; }
-            else if (randomness_type == "replace") { color = WHITE; }
+            if (randomness_type == "on") { value = true; }
+            else if (randomness_type == "off") { value = false; }
+            else if (randomness_type == "replace") { value = true; }
             else if (randomness_type == "flip") {
-                var pixel = getPixel(imageData, x, y, "off");
-                color = pixel ? BLACK : WHITE;
+                value = !board.getCell(x, y);
             }
         } else {
-            if (randomness_type == "replace") { color = BLACK; }
+            if (randomness_type == "replace") { value = false; }
         }
 
-        if (color != null) {
-            setPixel(imageData, x, y, color);
+        if (value != null) {
+            board.setCell(x, y, value);
         }
     }
 }
 
 /**
  * Shifts up the canvas by a single pixel.
- * @param {ImageData} imageData
+ * @param {Board} board
  * @param {number} amount
  * @param {Rule} rule
  * @param {BoundaryCondition} boundary
  */
-function shiftUp(imageData, amount, rule, boundary) {
+function shiftUp(board, amount, rule, boundary) {
     // Prevent scrolling the entire canvas offscreen
-    if (amount >= imageData.height) {
-        amount = imageData.height - 1;
+    if (amount >= board.height) {
+        amount = board.height - 1;
     }
 
-    for (let y = 0; y < imageData.height - amount; y++) {
-        for (let x = 0; x < imageData.width; x++) {
-            const pixel = getPixel(imageData, x, y + amount, boundary);
-            setPixel(imageData, x, y, pixel ? WHITE : BLACK);
+    for (let y = 0; y < board.height - amount; y++) {
+        for (let x = 0; x < board.width; x++) {
+            const pixel = board.getCell(x, y + amount, boundary);
+            board.setCell(x, y, pixel);
         }
     }
-    for (let y = imageData.height - amount; y < imageData.height; y++) {
-        renderRow(imageData, y, rule, boundary);
+    for (let y = board.height - amount; y < board.height; y++) {
+        computeRow(board, y, rule, boundary);
     }
 }
 
 /**
- * @param {ImageData} imageData
+ * @param {Board} board
  * @param {number} y
  * @param {Rule} rule
  * @param {BoundaryCondition} boundary
  */
-function renderRow(imageData, y, rule, boundary) {
-    for (let x = 0; x < imageData.width; x++) {
-        const left = getPixel(imageData, x - 1, y - 1, boundary);
-        const mid = getPixel(imageData, x, y - 1, boundary);
-        const right = getPixel(imageData, x + 1, y - 1, boundary);
+function computeRow(board, y, rule, boundary) {
+    for (let x = 0; x < board.width; x++) {
+        const left = board.getCell(x - 1, y - 1, boundary);
+        const mid = board.getCell(x, y - 1, boundary);
+        const right = board.getCell(x + 1, y - 1, boundary);
 
         const cell = rule(left, mid, right);
 
-        const color = cell ? WHITE : BLACK;
-        setPixel(imageData, x, y, color);
+        board.setCell(x, y, cell);
     }
+}
+
+
+/****************
+ * Render Image *
+ ****************/
+
+/**
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Board} board 
+ */
+function renderBoard(ctx, board) {
+    /**
+     * @param {number} r
+     * @param {number} g
+     * @param {number} b
+     * @param {number} a
+     */
+    function packColor(r, g, b, a) { return (a << 24) | (b << 16) | (g << 8) | r; }
+
+    const imageData = ctx.createImageData(board.width, board.height);
+    const buf32 = new Uint32Array(imageData.data.buffer);
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+
+    const WHITE = packColor(255, 255, 255, 255);
+    const BLACK = packColor(0, 0, 0, 255);
+
+    // Very hot loop. Try to hoist constants out of this loop.
+    for (let x = 0; x < width; x++) {
+        for (let y = 0; y < height; y++) {
+            const pixel = board.getCell(x, y);
+            const color = pixel ? WHITE : BLACK;
+            const index = y * width + x;
+            buf32[index] = color;
+        }
+    }
+    ctx.putImageData(imageData, 0, 0);
+
 }
 
 /*****************************
@@ -334,7 +390,10 @@ function resetCanvas() {
     const initial = getInitialCondition();
     const n = getRule();
     const rule = make_rule(n);
-    initialize_canvas(rule, boundary, initial);
+
+    BOARD = new Board(CTX.canvas.width, CTX.canvas.height);
+    initialize_board(BOARD, rule, boundary, initial);
+    renderBoard(CTX, BOARD);
 }
 
 function resetIfNotPlaying() {
@@ -608,24 +667,27 @@ function animationLoop(timestamp) {
 
         const n = getRule();
         if (rowsToShift > 0) {
-            const imageData = CTX.getImageData(0, 0, CTX.canvas.width, CTX.canvas.height);
-
+            const board = unwrap(BOARD);
             if (ADD_RANDOMNESS) {
                 const percent = getRandomnessAmount();
                 const randomness_type = getRandomnessType();
-                injectRandomness(imageData, imageData.height - 1, randomness_type, percent)
+                injectRandomness(board, board.height - 1, randomness_type, percent)
                 ADD_RANDOMNESS = false;
             }
 
             const boundary = getBoundaryCondition();
-            shiftUp(imageData, rowsToShift, make_rule(n), boundary);
-            CTX.putImageData(imageData, 0, 0);
+            shiftUp(board, rowsToShift, make_rule(n), boundary);
+            renderBoard(CTX, board);
+
             // Only record LAST_FRAME if we actually changed anything on the canvas.
             LAST_FRAME = timestamp;
         }
         requestAnimationFrame(animationLoop);
     }
 }
+
+/** @type {Board | null} */
+let BOARD = null;
 
 let ANIMATING = false;
 // Note: In miliseconds
@@ -635,10 +697,6 @@ let ADD_RANDOMNESS = false;
 
 /** @typedef {[number, number, number]} Color */
 
-/** @type {Color} */
-const BLACK = [0, 0, 0];
-/** @type {Color} */
-const WHITE = [255, 255, 255];
 
 const canvas = getTypedElementById('canvas', HTMLCanvasElement);
 const CTX = unwrap(canvas.getContext("2d"));
