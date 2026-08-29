@@ -845,8 +845,8 @@ const _completement_rule_button = getElementAndSetListeners('complement-rule', H
 const _invert_rule_button = getElementAndSetListeners('invert-rule', HTMLButtonElement, invertRule);
 
 const _randomize_both_colors_button = getElementAndSetListeners('randomize-both-colors', HTMLButtonElement, () => { randomizeBothColors(); render(); });
-const _randomize_on_color_button = getElementAndSetListeners('randomize-on-color', HTMLButtonElement, () => { randomizeOffColor(); render(); });
-const _randomize_off_color_button = getElementAndSetListeners('randomize-off-color', HTMLButtonElement, () => { randomizeOnColor(); render(); });
+const _randomize_off_color_button = getElementAndSetListeners('randomize-off-color', HTMLButtonElement, () => { randomizeOffColor(); render(); });
+const _randomize_on_color_button = getElementAndSetListeners('randomize-on-color', HTMLButtonElement, () => { randomizeOnColor(); render(); });
 
 const speed_input = getElementAndSetListeners('speed', HTMLInputElement, setSpeedLabel);
 const randomness_input = getElementAndSetListeners('randomness-amount', HTMLInputElement, setRandomnessLabel);
