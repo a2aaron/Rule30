@@ -98,7 +98,7 @@ function unwrap(x) {
  * @param {function(): void} listener
  * @param {(HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLCanvasElement)[]} elements
  */
-function setEventListener(listener, ...elements) {
+function addEventListener(listener, ...elements) {
     for (const element of elements) {
         if (element instanceof HTMLInputElement) {
             element.addEventListener("input", () => listener());
@@ -108,6 +108,22 @@ function setEventListener(listener, ...elements) {
             element.addEventListener("change", () => listener());
         }
     }
+}
+
+/**
+ * @template {HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLCanvasElement} ListenerElementType
+ * @param {string} id
+ * @param {Constructor<ListenerElementType>} ty
+ * @param {(function(): void)[]} listeners
+ * @returns {ListenerElementType}
+ */
+function getElementAndSetListeners(id, ty, ...listeners) {
+    const element = getTypedElementById(id, ty);
+    for (const listener of listeners) {
+        addEventListener(listener, element);
+    }
+
+    return element;
 }
 
 /**
@@ -806,77 +822,48 @@ let ADD_RANDOMNESS = false;
 /** @typedef {[number, number, number]} Color */
 
 
-const canvas = getTypedElementById('canvas', HTMLCanvasElement);
+const canvas = getElementAndSetListeners('canvas', HTMLCanvasElement, copyCanvasToClipboard);
 const CTX = unwrap(canvas.getContext("2d"));
 
-const rule_input = getTypedElementById('rule', HTMLInputElement);
-const internal_width_input = getTypedElementById('internal-width', HTMLInputElement);
-const internal_height_input = getTypedElementById('internal-height', HTMLInputElement);
-const lock_internal_size_input = getTypedElementById('lock-internal-size', HTMLInputElement);
-const external_width_input = getTypedElementById('external-width', HTMLInputElement);
-const external_height_input = getTypedElementById('external-height', HTMLInputElement);
-const lock_aspect_ratio_input = getTypedElementById('lock-aspect-ratio', HTMLInputElement);
+const rule_input = getElementAndSetListeners('rule', HTMLInputElement, updateRuleCheckboxes, resetIfNotPlaying);
+const internal_width_input = getElementAndSetListeners('internal-width', HTMLInputElement, applyControls);
+const internal_height_input = getElementAndSetListeners('internal-height', HTMLInputElement, applyControls, setSpeedLabel);
+const lock_internal_size_input = getElementAndSetListeners('lock-internal-size', HTMLInputElement, setSpeedLabel);
+const external_width_input = getElementAndSetListeners('external-width', HTMLInputElement, applyControls);
+const external_height_input = getElementAndSetListeners('external-height', HTMLInputElement, applyControls);
+const lock_aspect_ratio_input = getElementAndSetListeners('lock-aspect-ratio', HTMLInputElement, applyControls);
 
-const color_for_off_input = getTypedElementById('color-for-off', HTMLInputElement);
-const color_for_on_input = getTypedElementById('color-for-on', HTMLInputElement);
+const color_for_off_input = getElementAndSetListeners('color-for-off', HTMLInputElement, render);
+const color_for_on_input = getElementAndSetListeners('color-for-on', HTMLInputElement, render);
 
-const play_button = getTypedElementById('play', HTMLButtonElement);
-const reset_button = getTypedElementById('reset', HTMLButtonElement);
-const inject_randomness_button = getTypedElementById('inject-randomness', HTMLButtonElement);
-const randomize_rule_button = getTypedElementById('randomize-rule', HTMLButtonElement);
-const flip_rule_button = getTypedElementById('flip-rule', HTMLButtonElement);
-const completement_rule_button = getTypedElementById('complement-rule', HTMLButtonElement);
-const invert_rule_button = getTypedElementById('invert-rule', HTMLButtonElement);
+const play_button = getElementAndSetListeners('play', HTMLButtonElement, toggleAnimating);
+const _reset_button = getElementAndSetListeners('reset', HTMLButtonElement, resetCanvas);
+const _inject_randomness_button = getElementAndSetListeners('inject-randomness', HTMLButtonElement, () => ADD_RANDOMNESS = true);
+const _randomize_rule_button = getElementAndSetListeners('randomize-rule', HTMLButtonElement, randomizeRule);
+const _flip_rule_button = getElementAndSetListeners('flip-rule', HTMLButtonElement, flipRule);
+const _completement_rule_button = getElementAndSetListeners('complement-rule', HTMLButtonElement, complementRule);
+const _invert_rule_button = getElementAndSetListeners('invert-rule', HTMLButtonElement, invertRule);
 
-const randomize_both_colors_button = getTypedElementById('randomize-both-colors', HTMLButtonElement);
-const randomize_on_color_button = getTypedElementById('randomize-on-color', HTMLButtonElement);
-const randomize_off_color_button = getTypedElementById('randomize-off-color', HTMLButtonElement);
+const _randomize_both_colors_button = getElementAndSetListeners('randomize-both-colors', HTMLButtonElement, () => { randomizeBothColors(); render(); });
+const _randomize_on_color_button = getElementAndSetListeners('randomize-on-color', HTMLButtonElement, () => { randomizeOffColor(); render(); });
+const _randomize_off_color_button = getElementAndSetListeners('randomize-off-color', HTMLButtonElement, () => { randomizeOnColor(); render(); });
 
-const speed_input = getTypedElementById('speed', HTMLInputElement);
-const randomness_input = getTypedElementById('randomness-amount', HTMLInputElement);
+const speed_input = getElementAndSetListeners('speed', HTMLInputElement, setSpeedLabel);
+const randomness_input = getElementAndSetListeners('randomness-amount', HTMLInputElement, setRandomnessLabel);
 
-const boundary_dropdown = getTypedElementById('boundary', HTMLSelectElement);
-const initial_dropdown = getTypedElementById('initial', HTMLSelectElement);
-const randomness_type_dropdown = getTypedElementById('randomness-type', HTMLSelectElement);
+const boundary_dropdown = getElementAndSetListeners('boundary', HTMLSelectElement, resetIfNotPlaying);
+const initial_dropdown = getElementAndSetListeners('initial', HTMLSelectElement, resetCanvas);
+const randomness_type_dropdown = getElementAndSetListeners('randomness-type', HTMLSelectElement);
 
 const copied_to_clipboard_message = getTypedElementById('copied-to-clipboard-message', HTMLParagraphElement);
 
 const NUM_RULE_CHECKBOXES = 8;
-/**
- * @type {HTMLInputElement[]}
- */
+/** @type {HTMLInputElement[]} */
 const rule_checkboxes = [];
 for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
-    const rule_checkbox = getTypedElementById(`rule-checkbox-${i}`, HTMLInputElement);
+    const rule_checkbox = getElementAndSetListeners(`rule-checkbox-${i}`, HTMLInputElement, updateRuleInput);
     rule_checkboxes.push(rule_checkbox)
 }
-
-setEventListener(updateRuleInput, ...rule_checkboxes);
-setEventListener(updateRuleCheckboxes, rule_input);
-
-setEventListener(toggleAnimating, play_button);
-setEventListener(resetCanvas, reset_button);
-setEventListener(() => ADD_RANDOMNESS = true, inject_randomness_button)
-
-setEventListener(randomizeRule, randomize_rule_button);
-setEventListener(flipRule, flip_rule_button);
-setEventListener(complementRule, completement_rule_button);
-setEventListener(invertRule, invert_rule_button);
-
-setEventListener(() => { randomizeBothColors(); render(); }, randomize_both_colors_button);
-setEventListener(() => { randomizeOffColor(); render(); }, randomize_off_color_button);
-setEventListener(() => { randomizeOnColor(); render(); }, randomize_on_color_button);
-
-setEventListener(resetCanvas, initial_dropdown);
-setEventListener(resetIfNotPlaying, rule_input);
-setEventListener(resetIfNotPlaying, boundary_dropdown);
-
-setEventListener(copyCanvasToClipboard, canvas);
-
-setEventListener(applyControls, lock_aspect_ratio_input, external_width_input, external_height_input, lock_internal_size_input, internal_width_input, internal_height_input);
-setEventListener(setSpeedLabel, lock_internal_size_input, speed_input, internal_height_input);
-setEventListener(setRandomnessLabel, randomness_input);
-setEventListener(render, color_for_off_input, color_for_on_input);
 
 resetCanvas();
 applyControls();
