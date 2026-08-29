@@ -143,12 +143,25 @@
 
       <label for="boundary" title="Sets the boundary condition">Boundary</label>
       <select id="boundary">
+        <option value="wrap">Wrap Around</option>
         <option value="off">Assume Off</option>
         <option value="on">Assume On</option>
-        <option value="wrap">Wrap Around</option>
       </select>
 
       <h3>Canvas Options</h3>
+      <button id="randomize-both-colors">Randomize Colors</button>
+
+      <label for="color-for-off" title="Color for cells which are off">Off Cell Color</label>
+      <ui-group>
+        <input type="color" id="color-for-off" value="black">
+        <button id="randomize-off-color">Randomize</button>
+      </ui-group>
+
+      <label for="color-for-on" title="Color for cells which are on">On Cell Color</label>
+      <ui-group>
+        <input type="color" id="color-for-on" value="white">
+        <button id="randomize-on-color">Randomize</button>
+      </ui-group>
 
       <label for="lock-internal-size" title="If checked, locks the internal size to the external size">Lock
         internal size</label>

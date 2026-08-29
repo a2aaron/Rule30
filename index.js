@@ -11,11 +11,12 @@
  * @typedef { new (...args: any[]) => T } Constructor
  */
 
+
 /**
  * @param { number } x
  * @param { number } smoothness
  * @param { number } inflection_point
- */
+*/
 function smoothStep(x, smoothness, inflection_point) {
     if (x <= 0.0) { return 0.0; }
     if (x >= 1.0) { return 1.0; }
@@ -103,6 +104,65 @@ function setEventListener(listener, ...elements) {
     }
 }
 
+/**
+ * @param {number} min
+ * @param {number} max
+ */
+function randomRange(min, max) {
+    return Math.random() * (max - min) + min
+}
+
+
+
+/**
+ * Adapted from https://gist.github.com/earthbound19/e7fe15fdf8ca3ef814750a61bc75b5ce
+ * @param {number} lightness
+ * @param {number} a
+ * @param {number} b
+ * @returns {[number, number, number]}
+ */
+function oklab(lightness, a, b) {
+    /** @param {number} c */
+    function linearToGamma(c) {
+        return c >= 0.0031308 ? 1.055 * Math.pow(c, 1 / 2.4) - 0.055 : 12.92 * c;
+    }
+
+    const l = lightness + a * +0.3963377774 + b * +0.2158037573;
+    const m = lightness + a * -0.1055613458 + b * -0.0638541728;
+    const s = lightness + a * -0.0894841775 + b * -1.2914855480;
+
+    const l_cubed = l ** 3;
+    const m_cubed = m ** 3;
+    const s_cubed = s ** 3;
+
+    const r_linear = l_cubed * +4.0767416621 + m_cubed * -3.3077115913 + s_cubed * +0.2309699292;
+    const g_linear = l_cubed * -1.2684380046 + m_cubed * +2.6097574011 + s_cubed * -0.3413193965;
+    const b_linear = l_cubed * -0.0041960863 + m_cubed * -0.7034186147 + s_cubed * +1.7076147010;
+
+    // Convert linear RGB to sRGB (produces perceptually linear lightness)
+    const red = linearToGamma(r_linear);
+    const green = linearToGamma(g_linear);
+    const blue = linearToGamma(b_linear);
+
+    return [red, green, blue];
+}
+
+/**
+ * @param {number} red
+ * @param {number} green 
+ * @param {number} blue 
+ * @returns {string}
+ */
+function toHexColorCode(red, green, blue) {
+    /** @param {number} x */
+    function toHex(x) {
+        x = clamp(x * 255, 0, 255);
+        x = Math.round(x);
+        const hex = x.toString(16);
+        return hex.length == 1 ? `0${hex}` : hex;
+    }
+    return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+}
 
 
 
@@ -359,19 +419,29 @@ function renderBoard(ctx, board) {
      */
     function packColor(r, g, b, a) { return (a << 24) | (b << 16) | (g << 8) | r; }
 
+    /**
+     * @param {string} color
+     */
+    function parseColorCode(color) {
+        const r = parseInt(color.slice(1, 3), 16)
+        const g = parseInt(color.slice(3, 5), 16)
+        const b = parseInt(color.slice(5, 7), 16)
+        return packColor(r, g, b, 255);
+    }
+
     const imageData = ctx.createImageData(board.width, board.height);
     const buf32 = new Uint32Array(imageData.data.buffer);
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
 
-    const WHITE = packColor(255, 255, 255, 255);
-    const BLACK = packColor(0, 0, 0, 255);
+    const OFF_COLOR = parseColorCode(color_for_off_input.value);
+    const ON_COLOR = parseColorCode(color_for_on_input.value);
 
     // Very hot loop. Try to hoist constants out of this loop.
     for (let x = 0; x < width; x++) {
         for (let y = 0; y < height; y++) {
             const pixel = board.getCell(x, y);
-            const color = pixel ? WHITE : BLACK;
+            const color = pixel ? ON_COLOR : OFF_COLOR;
             const index = y * width + x;
             buf32[index] = color;
         }
@@ -384,6 +454,12 @@ function renderBoard(ctx, board) {
  * Controls & Event Handlers *
  *****************************/
 
+function render() {
+    if (BOARD != null) {
+        renderBoard(CTX, BOARD);
+    }
+}
+
 function resetCanvas() {
     CTX.imageSmoothingEnabled = false;
     const boundary = getBoundaryCondition();
@@ -393,7 +469,7 @@ function resetCanvas() {
 
     BOARD = new Board(CTX.canvas.width, CTX.canvas.height);
     initialize_board(BOARD, rule, boundary, initial);
-    renderBoard(CTX, BOARD);
+    render();
 }
 
 function resetIfNotPlaying() {
@@ -580,6 +656,32 @@ async function copyCanvasToClipboard() {
     copied_to_clipboard_message.classList.add("animate-fade");
 }
 
+/**
+ * @param {number} lightness
+ * @param {HTMLInputElement} color_input
+ */
+function randomizeColorInput(lightness, color_input) {
+    const a = randomRange(-0.4, 0.4);
+    const b = randomRange(-0.4, 0.4);
+    const [red, green, blue] = oklab(lightness, a, b);
+    console.log(red, green, blue);
+    const color = toHexColorCode(red, green, blue);
+    color_input.value = color;
+}
+
+function randomizeBothColors() {
+    randomizeOffColor();
+    randomizeOnColor();
+}
+
+function randomizeOnColor() {
+    randomizeColorInput(randomRange(0.5, 1.0), color_for_on_input);
+}
+
+function randomizeOffColor() {
+    randomizeColorInput(randomRange(0.0, 0.5), color_for_off_input);
+}
+
 function getRule() {
     return parseInt(rule_input.value);
 }
@@ -709,6 +811,9 @@ const external_width_input = getTypedElementById('external-width', HTMLInputElem
 const external_height_input = getTypedElementById('external-height', HTMLInputElement);
 const lock_aspect_ratio_input = getTypedElementById('lock-aspect-ratio', HTMLInputElement);
 
+const color_for_off_input = getTypedElementById('color-for-off', HTMLInputElement);
+const color_for_on_input = getTypedElementById('color-for-on', HTMLInputElement);
+
 const play_button = getTypedElementById('play', HTMLButtonElement);
 const reset_button = getTypedElementById('reset', HTMLButtonElement);
 const inject_randomness_button = getTypedElementById('inject-randomness', HTMLButtonElement);
@@ -716,6 +821,10 @@ const randomize_rule_button = getTypedElementById('randomize-rule', HTMLButtonEl
 const flip_rule_button = getTypedElementById('flip-rule', HTMLButtonElement);
 const completement_rule_button = getTypedElementById('complement-rule', HTMLButtonElement);
 const invert_rule_button = getTypedElementById('invert-rule', HTMLButtonElement);
+
+const randomize_both_colors_button = getTypedElementById('randomize-both-colors', HTMLButtonElement);
+const randomize_on_color_button = getTypedElementById('randomize-on-color', HTMLButtonElement);
+const randomize_off_color_button = getTypedElementById('randomize-off-color', HTMLButtonElement);
 
 const speed_input = getTypedElementById('speed', HTMLInputElement);
 const randomness_input = getTypedElementById('randomness-amount', HTMLInputElement);
@@ -748,6 +857,10 @@ flip_rule_button.addEventListener("click", flipRule);
 completement_rule_button.addEventListener("click", complementRule);
 invert_rule_button.addEventListener("click", invertRule);
 
+randomize_both_colors_button.addEventListener("click", () => { randomizeBothColors(); render(); });
+randomize_off_color_button.addEventListener("click", () => { randomizeOffColor(); render(); });
+randomize_on_color_button.addEventListener("click", () => { randomizeOnColor(); render(); });
+
 initial_dropdown.addEventListener('input', resetCanvas);
 rule_input.addEventListener('input', resetIfNotPlaying);
 boundary_dropdown.addEventListener('change', resetIfNotPlaying);
@@ -757,8 +870,10 @@ canvas.addEventListener('click', copyCanvasToClipboard);
 setEventListener(applyControls, lock_aspect_ratio_input, external_width_input, external_height_input, lock_internal_size_input, internal_width_input, internal_height_input);
 setEventListener(setSpeedLabel, lock_internal_size_input, speed_input, internal_height_input);
 setEventListener(setRandomnessLabel, randomness_input);
+setEventListener(render, color_for_off_input, color_for_on_input);
 
 resetCanvas();
 applyControls();
 setSpeedLabel();
 setRandomnessLabel();
+
