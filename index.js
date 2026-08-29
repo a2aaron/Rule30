@@ -40,6 +40,14 @@ function clamp(num, min, max) {
 }
 
 /**
+ * @param {number} n
+ * @param {number} mod
+ */
+function remEuclid(n, mod) {
+    return ((n % mod) + mod) % mod;
+}
+
+/**
  * Extracts the `i`th bit of `x`
  * @param {number} x number to extract bits from
  * @param {number} i index of the bit to get
@@ -53,6 +61,18 @@ function get_bit(x, i) {
 }
 
 /**
+ * @param {number} x
+ * @param {number} i
+ */
+function get_trit(x, i) {
+    const a = 3 ** (i + 1);
+    const b = 3 ** i;
+    const shifted = (x - a) / b;
+    return Math.floor(remEuclid(shifted, 3));
+}
+
+
+/**
  * @param {boolean[]} bits
  */
 function from_bits(...bits) {
@@ -62,6 +82,7 @@ function from_bits(...bits) {
     }
     return rule;
 }
+
 
 /**
  * Gets an element `id` and enforces that the element is of type `ty`
@@ -214,14 +235,6 @@ class Board {
      * @returns {Cell}
      */
     getCell(x, y, boundary) {
-        /**
-         * @param {number} n
-         * @param {number} mod
-         */
-        function remEuclid(n, mod) {
-            return ((n % mod) + mod) % mod;
-        }
-
         if (x < 0 || x >= this.width) {
             if (boundary === undefined) {
                 throw new Error(`x-coordinate ${x} is outside board size (width = ${this.width})`);
@@ -280,7 +293,6 @@ class Rule {
      * @param {number} y 
      */
     evaluate(board, x, y) {
-
         const left = board.getCell(x - 1, y, this.boundary);
         const mid = board.getCell(x, y, this.boundary);
         const right = board.getCell(x + 1, y, this.boundary);
@@ -321,18 +333,39 @@ function make_rule(n, boundary) {
      */
     function addShape(shapes, left, mid, right, value) {
         const shape = toShape(left, mid, right)
-        shapes.set(shape, value ? 1 : 0);
+        shapes.set(shape, value);
     }
 
     const shapes = new Map();
-    addShape(shapes, 0, 0, 0, get_bit(n, 0) ? 1 : 0);
-    addShape(shapes, 0, 0, 1, get_bit(n, 1) ? 1 : 0);
-    addShape(shapes, 0, 1, 0, get_bit(n, 2) ? 1 : 0);
-    addShape(shapes, 0, 1, 1, get_bit(n, 3) ? 1 : 0);
-    addShape(shapes, 1, 0, 0, get_bit(n, 4) ? 1 : 0);
-    addShape(shapes, 1, 0, 1, get_bit(n, 5) ? 1 : 0);
-    addShape(shapes, 1, 1, 0, get_bit(n, 6) ? 1 : 0);
-    addShape(shapes, 1, 1, 1, get_bit(n, 7) ? 1 : 0);
+    addShape(shapes, 0, 0, 0, get_trit(n, 0));
+    addShape(shapes, 0, 0, 1, get_trit(n, 1));
+    addShape(shapes, 0, 0, 2, get_trit(n, 2));
+    addShape(shapes, 0, 1, 0, get_trit(n, 3));
+    addShape(shapes, 0, 1, 1, get_trit(n, 4));
+    addShape(shapes, 0, 1, 2, get_trit(n, 5));
+    addShape(shapes, 0, 2, 2, get_trit(n, 6));
+    addShape(shapes, 0, 2, 2, get_trit(n, 7));
+    addShape(shapes, 0, 2, 2, get_trit(n, 8));
+
+    addShape(shapes, 1, 0, 0, get_trit(n, 9));
+    addShape(shapes, 1, 0, 1, get_trit(n, 10));
+    addShape(shapes, 1, 0, 2, get_trit(n, 11));
+    addShape(shapes, 1, 1, 0, get_trit(n, 12));
+    addShape(shapes, 1, 1, 1, get_trit(n, 13));
+    addShape(shapes, 1, 1, 2, get_trit(n, 14));
+    addShape(shapes, 1, 2, 2, get_trit(n, 15));
+    addShape(shapes, 1, 2, 2, get_trit(n, 16));
+    addShape(shapes, 1, 2, 2, get_trit(n, 17));
+
+    addShape(shapes, 2, 0, 0, get_trit(n, 18));
+    addShape(shapes, 2, 0, 1, get_trit(n, 19));
+    addShape(shapes, 2, 0, 2, get_trit(n, 20));
+    addShape(shapes, 2, 1, 0, get_trit(n, 21));
+    addShape(shapes, 2, 1, 1, get_trit(n, 22));
+    addShape(shapes, 2, 1, 2, get_trit(n, 23));
+    addShape(shapes, 2, 2, 2, get_trit(n, 24));
+    addShape(shapes, 2, 2, 2, get_trit(n, 25));
+    addShape(shapes, 2, 2, 2, get_trit(n, 26));
     return new Rule(boundary, shapes);
 }
 
@@ -496,14 +529,15 @@ function renderBoard(ctx, board) {
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
 
-    const OFF_COLOR = parseColorCode(color_state_0_input.value);
-    const ON_COLOR = parseColorCode(color_state_1_input.value);
+    const STATE_0 = parseColorCode(color_state_0_input.value);
+    const STATE_1 = parseColorCode(color_state_1_input.value);
+    const STATE_2 = parseColorCode(color_state_2_input.value);
 
     // Very hot loop. Try to hoist constants out of this loop.
     for (let x = 0; x < width; x++) {
         for (let y = 0; y < height; y++) {
-            const pixel = board.getCell(x, y);
-            const color = pixel ? ON_COLOR : OFF_COLOR;
+            const cell = board.getCell(x, y);
+            const color = cell == 0 ? STATE_0 : (cell == 1 ? STATE_1 : STATE_2);
             const index = y * width + x;
             buf32[index] = color;
         }
@@ -621,10 +655,10 @@ function setRandomnessLabel() {
 }
 
 function randomizeRule() {
-    const rule = Math.floor(Math.random() * 256);
+    const rule = Math.floor(Math.random() * 3 ** 27);
     rule_input.value = rule.toFixed(0);
     resetIfNotPlaying();
-    updateRuleCheckboxes();
+    // updateRuleCheckboxes();
 }
 
 function flipRule() {
@@ -733,6 +767,7 @@ function randomizeColor(lightness, color_input) {
 function randomizeAllColors() {
     randomizeState0Color();
     randomizeState1Color();
+    randomizeState2Color();
     render();
 }
 
@@ -741,6 +776,9 @@ function randomizeState0Color() {
 }
 function randomizeState1Color() {
     randomizeColor(randomRange(0.5, 1.0), color_state_1_input)
+}
+function randomizeState2Color() {
+    randomizeColor(randomRange(0.5, 1.0), color_state_2_input)
 }
 
 function getRule() {
@@ -874,6 +912,7 @@ const lock_aspect_ratio_input = getElementAndSetListeners('lock-aspect-ratio', H
 
 const color_state_0_input = getElementAndSetListeners('color-state-0', HTMLInputElement, render);
 const color_state_1_input = getElementAndSetListeners('color-state-1', HTMLInputElement, render);
+const color_state_2_input = getElementAndSetListeners('color-state-2', HTMLInputElement, render);
 
 const play_button = getElementAndSetListeners('play', HTMLButtonElement, toggleAnimating);
 const _reset_button = getElementAndSetListeners('reset', HTMLButtonElement, resetCanvas);
@@ -886,6 +925,7 @@ const _invert_rule_button = getElementAndSetListeners('invert-rule', HTMLButtonE
 const _randomize_both_colors_button = getElementAndSetListeners('randomize-all-colors', HTMLButtonElement, () => { randomizeAllColors(); render(); });
 const _randomize_state_0_color_button = getElementAndSetListeners('randomize-color-state-0', HTMLButtonElement, () => { randomizeState0Color(); render(); });
 const _randomize_state_1_color_button = getElementAndSetListeners('randomize-color-state-1', HTMLButtonElement, () => { randomizeState1Color(); render(); });
+const _randomize_state_2_color_button = getElementAndSetListeners('randomize-color-state-2', HTMLButtonElement, () => { randomizeState2Color(); render(); });
 
 const speed_input = getElementAndSetListeners('speed', HTMLInputElement, setSpeedLabel);
 const randomness_input = getElementAndSetListeners('randomness-amount', HTMLInputElement, setRandomnessLabel);
