@@ -200,16 +200,8 @@ class Board {
     constructor(width, height) {
         this.width = width;
         this.height = height;
-        this.board = [];
-        for (let y = 0; y < height; y++) {
-            const row = [];
-            for (let x = 0; x < width; x++) {
-                row.push(false);
-            }
-            this.board.push(row);
-        }
+        this.board = new Uint8Array(width * height);
     }
-
 
     /**
      * @param {number} x
@@ -250,7 +242,8 @@ class Board {
             }
         }
 
-        return this.board[y][x];
+        const i = x + y * this.width;
+        return this.board[i] == 1;
     }
 
     /**
@@ -259,7 +252,8 @@ class Board {
      * @param {boolean} value
      */
     setCell(x, y, value) {
-        this.board[y][x] = value;
+        const i = x + y * this.width;
+        this.board[i] = value ? 1 : 0;
     }
 }
 
@@ -394,12 +388,8 @@ function shiftUp(board, amount, rule, boundary) {
         amount = board.height - 1;
     }
 
-    for (let y = 0; y < board.height - amount; y++) {
-        for (let x = 0; x < board.width; x++) {
-            const pixel = board.getCell(x, y + amount, boundary);
-            board.setCell(x, y, pixel);
-        }
-    }
+    board.board.copyWithin(0, board.width * amount);
+
     for (let y = board.height - amount; y < board.height; y++) {
         computeRow(board, y, rule, boundary);
     }
