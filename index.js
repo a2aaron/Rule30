@@ -96,11 +96,17 @@ function unwrap(x) {
 
 /**
  * @param {function(): void} listener
- * @param {HTMLInputElement[]} elements
+ * @param {(HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLCanvasElement)[]} elements
  */
 function setEventListener(listener, ...elements) {
     for (const element of elements) {
-        element.addEventListener("input", () => listener());
+        if (element instanceof HTMLInputElement) {
+            element.addEventListener("input", () => listener());
+        } else if (element instanceof HTMLButtonElement || element instanceof HTMLCanvasElement) {
+            element.addEventListener("click", () => listener());
+        } else if (element instanceof HTMLSelectElement) {
+            element.addEventListener("change", () => listener());
+        }
     }
 }
 
@@ -848,24 +854,24 @@ for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
 setEventListener(updateRuleInput, ...rule_checkboxes);
 setEventListener(updateRuleCheckboxes, rule_input);
 
-play_button.addEventListener("click", toggleAnimating);
-reset_button.addEventListener("click", resetCanvas);
-inject_randomness_button.addEventListener("click", () => ADD_RANDOMNESS = true)
+setEventListener(toggleAnimating, play_button);
+setEventListener(resetCanvas, reset_button);
+setEventListener(() => ADD_RANDOMNESS = true, inject_randomness_button)
 
-randomize_rule_button.addEventListener("click", randomizeRule);
-flip_rule_button.addEventListener("click", flipRule);
-completement_rule_button.addEventListener("click", complementRule);
-invert_rule_button.addEventListener("click", invertRule);
+setEventListener(randomizeRule, randomize_rule_button);
+setEventListener(flipRule, flip_rule_button);
+setEventListener(complementRule, completement_rule_button);
+setEventListener(invertRule, invert_rule_button);
 
-randomize_both_colors_button.addEventListener("click", () => { randomizeBothColors(); render(); });
-randomize_off_color_button.addEventListener("click", () => { randomizeOffColor(); render(); });
-randomize_on_color_button.addEventListener("click", () => { randomizeOnColor(); render(); });
+setEventListener(() => { randomizeBothColors(); render(); }, randomize_both_colors_button);
+setEventListener(() => { randomizeOffColor(); render(); }, randomize_off_color_button);
+setEventListener(() => { randomizeOnColor(); render(); }, randomize_on_color_button);
 
-initial_dropdown.addEventListener('input', resetCanvas);
-rule_input.addEventListener('input', resetIfNotPlaying);
-boundary_dropdown.addEventListener('change', resetIfNotPlaying);
+setEventListener(resetCanvas, initial_dropdown);
+setEventListener(resetIfNotPlaying, rule_input);
+setEventListener(resetIfNotPlaying, boundary_dropdown);
 
-canvas.addEventListener('click', copyCanvasToClipboard);
+setEventListener(copyCanvasToClipboard, canvas);
 
 setEventListener(applyControls, lock_aspect_ratio_input, external_width_input, external_height_input, lock_internal_size_input, internal_width_input, internal_height_input);
 setEventListener(setSpeedLabel, lock_internal_size_input, speed_input, internal_height_input);
