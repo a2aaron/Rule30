@@ -84,6 +84,31 @@ function from_bits(...bits) {
 }
 
 
+
+/**
+ * @template {keyof HTMLElementTagNameMap} K
+ *
+ * @param {K | string} tagName
+ * @param {...(Node | string)} children
+ * 
+ * @overload
+ * @param {K} tagName
+ * @param {...(Node | string)[]} children
+ * @returns {HTMLElementTagNameMap[K]}
+ *
+ * @overload
+ * @param {string} tagName
+ * @param {...(Node | string)[]} children
+ * @returns {HTMLElement}
+ */
+// eslint-disable-next-line no-unused-vars
+function h(tagName, ...children) {
+    const element = document.createElement(tagName);
+    element.append(...children);
+    return element;
+}
+
+
 /**
  * Gets an element `id` and enforces that the element is of type `ty`
  * @template ElementType
@@ -99,6 +124,7 @@ function getTypedElementById(id, ty) {
     }
     return element;
 }
+
 
 /**
  * Returns `x`. If `x` is null, an error is thrown.
@@ -116,8 +142,22 @@ function unwrap(x) {
 }
 
 /**
+ * @template T
+ * @param {any} value
+ * @param {Constructor<T>} ty
+ * @returns {T}
+ */
+function cast(value, ty) {
+    if (value instanceof ty) {
+        return value;
+    } else {
+        throw new Error(`Expected ${value} to be of type ${ty} but got ${value.constructor.name}`);
+    }
+}
+
+/**
  * @param {function(): void} listener
- * @param {(HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLCanvasElement)[]} elements
+ * @param {(HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLCanvasElement | HTMLElement)[]} elements
  */
 function addEventListener(listener, ...elements) {
     for (const element of elements) {
@@ -127,6 +167,8 @@ function addEventListener(listener, ...elements) {
             element.addEventListener("click", () => listener());
         } else if (element instanceof HTMLSelectElement) {
             element.addEventListener("change", () => listener());
+        } else {
+            element.addEventListener("click", () => listener());
         }
     }
 }
@@ -658,7 +700,7 @@ function randomizeRule() {
     const rule = Math.floor(Math.random() * 3 ** 27);
     rule_input.value = rule.toFixed(0);
     resetIfNotPlaying();
-    // updateRuleCheckboxes();
+    updateRuleInputs();
 }
 
 function flipRule() {
@@ -677,7 +719,7 @@ function flipRule() {
 
     rule_input.value = newRule.toFixed(0);
     resetIfNotPlaying();
-    updateRuleCheckboxes();
+    updateRuleInputs();
 }
 
 function complementRule() {
@@ -696,7 +738,7 @@ function complementRule() {
 
     rule_input.value = newRule.toFixed(0);
     resetIfNotPlaying();
-    updateRuleCheckboxes();
+    updateRuleInputs();
 }
 
 function invertRule() {
@@ -714,26 +756,52 @@ function invertRule() {
 
     rule_input.value = newRule.toFixed(0);
     resetIfNotPlaying();
-    updateRuleCheckboxes();
+    updateRuleInputs();
 }
 
-function updateRuleInput() {
-    let rule = 0;
-    for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
-        if (rule_checkboxes[i].checked) {
-            rule += 2 ** i;
-        }
-    }
+/**
+ * @param {number} i
+ */
+function ruleInputClicked(i) {
+    const newState = (getStateFromRuleInput(i) + 1) % 3;
+    // @ts-ignore newState is range 0 to 2 inclusive
+    setStateForRuleInput(i, newState);
+
+    const rule = getRuleNumberFromRuleBoxes();
     if (getRule() != rule) {
         rule_input.value = rule.toFixed(0);
         resetIfNotPlaying();
     }
 }
 
-function updateRuleCheckboxes() {
+function getRuleNumberFromRuleBoxes() {
+    let rule = 0;
+    for (let i = 0; i < RULE_INPUTS.length; i++) {
+        const state = getStateFromRuleInput(i);
+        rule += state * (3 ** i);
+    }
+    return rule;
+}
+
+/**
+ * @param {number} i
+ */
+function getStateFromRuleInput(i) {
+    return parseInt(RULE_INPUTS[i].dataset.state ?? "0");
+}
+
+/**
+ * @param {number} i
+ * @param {State} state
+ */
+function setStateForRuleInput(i, state) {
+    RULE_INPUTS[i].dataset.state = state.toString();
+}
+
+function updateRuleInputs() {
     const rule = getRule();
     for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
-        rule_checkboxes[i].checked = get_bit(rule, i);
+        RULE_INPUTS[i].dataset.state = get_trit(rule, i).toString();
     }
 }
 
@@ -753,32 +821,75 @@ async function copyCanvasToClipboard() {
 }
 
 /**
- * @param {number} lightness
- * @param {HTMLInputElement} color_input
+ * @param {number} lightness_min
+ * @param {number} lightness_max
  */
-function randomizeColor(lightness, color_input) {
+function getRandomColor(lightness_min, lightness_max) {
+    const lightness = randomRange(lightness_min, lightness_max);
     const a = randomRange(-0.4, 0.4);
     const b = randomRange(-0.4, 0.4);
     const [red, green, blue] = oklab(lightness, a, b);
-    const color = toHexColorCode(red, green, blue);
-    color_input.value = color;
+    return toHexColorCode(red, green, blue);
 }
 
 function randomizeAllColors() {
-    randomizeState0Color();
-    randomizeState1Color();
-    randomizeState2Color();
+    randomizeColorPicker(0);
+    randomizeColorPicker(1);
+    randomizeColorPicker(2);
     render();
 }
 
-function randomizeState0Color() {
-    randomizeColor(randomRange(0.0, 0.5), color_state_0_input)
+/**
+ * @typedef {0 | 1 | 2} State
+ * @param {State} state
+ */
+function randomizeColorPicker(state) {
+    const color = getRandomColorForState(state);
+    const color_picker = getColorPicker(state);
+    color_picker.value = color;
+    setColorVar(state);
+
 }
-function randomizeState1Color() {
-    randomizeColor(randomRange(0.5, 1.0), color_state_1_input)
+
+/**
+ * @param {State} state
+ */
+function setColorVar(state) {
+    const color_picker = getColorPicker(state);
+    const color = color_picker.value;
+    document.documentElement.style.setProperty(`--state-${state}-color`, color);
 }
-function randomizeState2Color() {
-    randomizeColor(randomRange(0.5, 1.0), color_state_2_input)
+
+/**
+ * @param {State} state
+ * @returns {string}
+ */
+function getRandomColorForState(state) {
+    if (state == 0) {
+        return getRandomColor(0.0, 0.5);
+    } else if (state == 1) {
+        return getRandomColor(0.5, 1.0);
+    } else if (state == 2) {
+        return getRandomColor(0.5, 1.0);
+    } else {
+        throw new Error("unreachable");
+    }
+}
+
+/**
+ * @param {State} state
+ * @returns {HTMLInputElement}
+ */
+function getColorPicker(state) {
+    if (state == 0) {
+        return color_state_0_input;
+    } else if (state == 1) {
+        return color_state_1_input;
+    } else if (state == 2) {
+        return color_state_2_input;
+    } else {
+        throw new Error("unreachable");
+    }
 }
 
 function getRule() {
@@ -849,6 +960,34 @@ function getRandomnessType() {
     throw new Error("unreachable");
 }
 
+/**
+ * @param {number} num_checkboxes
+ */
+function createRuleDiagrams(num_checkboxes) {
+    const rule_diagrams_element = unwrap(document.querySelector("rule-diagrams"));
+    const rule_inputs = [];
+
+    for (let i = 0; i < num_checkboxes; i++) {
+        const rule_diagram = document.importNode(rule_diagram_template.content, true);
+
+        const rule_input = cast(rule_diagram.querySelector("rule-input"), HTMLElement);
+        addEventListener(() => ruleInputClicked(i), rule_input);
+
+        rule_inputs.push(rule_input);
+
+        const rule_boxes = rule_diagram.querySelectorAll("rule-box");
+        for (let j = 0; j < 3; j++) {
+            const rule_box = cast(rule_boxes[j], HTMLElement);
+            // Use 2 - j so that the rightmost box changes first and the leftmost box changes last
+            const state = get_trit(i, 2 - j);
+            rule_box.dataset.state = state.toString();
+        }
+
+        rule_diagrams_element.appendChild(rule_diagram);
+    }
+    return rule_inputs;
+}
+
 /*************
  * Animation *
  *************/
@@ -902,7 +1041,7 @@ let ADD_RANDOMNESS = false;
 const canvas = getElementAndSetListeners('canvas', HTMLCanvasElement, copyCanvasToClipboard);
 const CTX = unwrap(canvas.getContext("2d"));
 
-const rule_input = getElementAndSetListeners('rule', HTMLInputElement, updateRuleCheckboxes, resetIfNotPlaying);
+const rule_input = getElementAndSetListeners('rule', HTMLInputElement, updateRuleInputs, resetIfNotPlaying);
 const internal_width_input = getElementAndSetListeners('internal-width', HTMLInputElement, applyControls);
 const internal_height_input = getElementAndSetListeners('internal-height', HTMLInputElement, applyControls, setSpeedLabel);
 const lock_internal_size_input = getElementAndSetListeners('lock-internal-size', HTMLInputElement, setSpeedLabel);
@@ -910,9 +1049,9 @@ const external_width_input = getElementAndSetListeners('external-width', HTMLInp
 const external_height_input = getElementAndSetListeners('external-height', HTMLInputElement, applyControls);
 const lock_aspect_ratio_input = getElementAndSetListeners('lock-aspect-ratio', HTMLInputElement, applyControls);
 
-const color_state_0_input = getElementAndSetListeners('color-state-0', HTMLInputElement, render);
-const color_state_1_input = getElementAndSetListeners('color-state-1', HTMLInputElement, render);
-const color_state_2_input = getElementAndSetListeners('color-state-2', HTMLInputElement, render);
+const color_state_0_input = getElementAndSetListeners('color-state-0', HTMLInputElement, () => { setColorVar(0); render(); });
+const color_state_1_input = getElementAndSetListeners('color-state-1', HTMLInputElement, () => { setColorVar(1); render(); });
+const color_state_2_input = getElementAndSetListeners('color-state-2', HTMLInputElement, () => { setColorVar(2); render(); });
 
 const play_button = getElementAndSetListeners('play', HTMLButtonElement, toggleAnimating);
 const _reset_button = getElementAndSetListeners('reset', HTMLButtonElement, resetCanvas);
@@ -923,9 +1062,9 @@ const _completement_rule_button = getElementAndSetListeners('complement-rule', H
 const _invert_rule_button = getElementAndSetListeners('invert-rule', HTMLButtonElement, invertRule);
 
 const _randomize_both_colors_button = getElementAndSetListeners('randomize-all-colors', HTMLButtonElement, () => { randomizeAllColors(); render(); });
-const _randomize_state_0_color_button = getElementAndSetListeners('randomize-color-state-0', HTMLButtonElement, () => { randomizeState0Color(); render(); });
-const _randomize_state_1_color_button = getElementAndSetListeners('randomize-color-state-1', HTMLButtonElement, () => { randomizeState1Color(); render(); });
-const _randomize_state_2_color_button = getElementAndSetListeners('randomize-color-state-2', HTMLButtonElement, () => { randomizeState2Color(); render(); });
+const _randomize_state_0_color_button = getElementAndSetListeners('randomize-color-state-0', HTMLButtonElement, () => { randomizeColorPicker(0); render(); });
+const _randomize_state_1_color_button = getElementAndSetListeners('randomize-color-state-1', HTMLButtonElement, () => { randomizeColorPicker(1); render(); });
+const _randomize_state_2_color_button = getElementAndSetListeners('randomize-color-state-2', HTMLButtonElement, () => { randomizeColorPicker(2); render(); });
 
 const speed_input = getElementAndSetListeners('speed', HTMLInputElement, setSpeedLabel);
 const randomness_input = getElementAndSetListeners('randomness-amount', HTMLInputElement, setRandomnessLabel);
@@ -936,16 +1075,17 @@ const randomness_type_dropdown = getElementAndSetListeners('randomness-type', HT
 
 const copied_to_clipboard_message = getTypedElementById('copied-to-clipboard-message', HTMLParagraphElement);
 
-const NUM_RULE_CHECKBOXES = 8;
-/** @type {HTMLInputElement[]} */
-const rule_checkboxes = [];
-for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
-    const rule_checkbox = getElementAndSetListeners(`rule-checkbox-${i}`, HTMLInputElement, updateRuleInput);
-    rule_checkboxes.push(rule_checkbox)
-}
+const rule_diagram_template = getTypedElementById('rule-diagram', HTMLTemplateElement);
+const NUM_RULE_CHECKBOXES = 27;
+
+/** @type {HTMLElement[]} */
+const RULE_INPUTS = createRuleDiagrams(NUM_RULE_CHECKBOXES);
 
 resetCanvas();
 applyControls();
 setSpeedLabel();
 setRandomnessLabel();
-updateRuleCheckboxes();
+updateRuleInputs();
+setColorVar(0);
+setColorVar(1);
+setColorVar(2);

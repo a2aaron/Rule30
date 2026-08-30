@@ -40,43 +40,45 @@ ui-grid {
         width: fit-content;
     }
 
-    rule-checkboxes {
+    rule-diagrams {
         grid-column: 1 / -1;
 
-        display: flex;
-        flex-direction: column;
-        gap: 1.5em;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        row-gap: 1.5em;
+        justify-items: center;
         
         border: 1px solid black;
         padding-top: 1.5em;
-        padding-left: 1em;
-        padding-right: 1em;
         padding-bottom: 1em;
+   
+        rule-diagram {
+            display: grid;
+            grid-template-columns: auto auto auto;
 
-        checkbox-row {
-            display: flex;
-            flex-direction: row;
-            align-self: center;
-            justify-content: space-evenly;
-            gap: 1em;
-            width: 100%;
-
-            rule-diagram {
-                display: flex;
-                gap: 0.1em;
-                rule-box {
-                    display: block;
-                    border: black 1px solid;
-                    width: 1em;
-                    height: 1em;
-                }
-                .on { background-color: white; }
-                .off { background-color: black; }       
+            gap: 0.2em;
+            rule-box, rule-input {
+                display: block;
+                border: black 1px solid;
+                width: 1em;
+                height: 1em;
             }
+            rule-input {
+                grid-column: 2 / 2;
+            }
+            [data-state="0"] { background-color: var(--state-0-color); }
+            [data-state="1"] { background-color: var(--state-1-color); }
+            [data-state="2"] { background-color: var(--state-2-color); }
         }
     }
 
     .narrow-input { width: 8ch; }
+}
+
+:root {
+    --state-0-color: black;
+    --state-1-color: white;
+    --state-2-color: red;
 }
 
 #copied-to-clipboard-message {
