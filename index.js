@@ -47,18 +47,6 @@ function remEuclid(n, mod) {
     return ((n % mod) + mod) % mod;
 }
 
-/**
- * Extracts the `i`th bit of `x`
- * @param {number} x number to extract bits from
- * @param {number} i index of the bit to get
- * @returns {boolean} 1 if the `i`th bit is 1 and false otherwise
- */
-function get_bit(x, i) {
-    const mask = 1 << i;
-    const masked_x = x & mask;
-    const bit_is_set = masked_x > 0;
-    return bit_is_set;
-}
 
 /**
  * @typedef {0 | 1 | 2} Trit
@@ -70,22 +58,10 @@ function get_trit(x, i) {
     const a = 3 ** (i + 1);
     const b = 3 ** i;
     const shifted = (x - a) / b;
-    // @ts-ignore
-    return Math.floor(remEuclid(shifted, 3));
+    const trit = Math.floor(remEuclid(shifted, 3));
+    assertTrit(trit);
+    return trit;
 }
-
-
-/**
- * @param {boolean[]} bits
- */
-function from_bits(...bits) {
-    let rule = 0;
-    for (var i = 0; i < bits.length; i++) {
-        rule += bits[i] ? 2 ** i : 0;
-    }
-    return rule;
-}
-
 
 
 /**
@@ -260,7 +236,7 @@ function toHexColorCode(red, green, blue) {
 
 
 /**
- * @typedef {number} Cell
+ * @typedef {Trit} Cell
  */
 class Board {
     /**
@@ -305,6 +281,8 @@ class Board {
         }
 
         const i = x + y * this.width;
+        //@ts-ignore This is called in a hot loop. The only way to store to this.board however
+        // is from setCell, which only accepts Cells.
         return this.board[i];
     }
 
@@ -321,12 +299,12 @@ class Board {
 
 class Rule {
     /**
-     * @typedef {number} RuleIndex
-     * @param {number} i
-     * @param {number} newState
+     * @typedef {number & { __brand: "ruleBoxIndex" }} RuleBoxIndex
+     * @param {RuleBoxIndex} i
+     * @param {Trit} newState
      */
     setRuleIndex(i, newState) {
-        const shape = Rule.fromRuleIndex(i);
+        const shape = Rule.fromRuleBoxIndex(i);
         console.log(shape);
         this.shapes.set(shape, newState);
     }
@@ -361,23 +339,29 @@ class Rule {
     }
 
     /**
-     * @param {number} rule
+     * @param {NumericRule} rule
      */
     setFromNumericRule(rule) {
         this.shapes = Rule.shapeFromNumericRule(rule);
     }
 
+    /**
+     * @returns {NumericRule}
+     */
     getNumericRule() {
         let rule = 0;
         for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
-            const shape = Rule.fromRuleIndex(i);
+            assertRuleBoxIndex(i);
+            const shape = Rule.fromRuleBoxIndex(i);
             if (this.shapes.get(shape) === undefined) {
                 console.log(shape);
             }
             const cell = unwrap(this.shapes.get(shape));
+
             rule += cell * (3 ** i);
         }
-        return rule;
+
+        return numericRule(rule);
     }
 
     randomize() {
@@ -403,6 +387,7 @@ class Rule {
      * @param {number} amount
      */
     complement(amount) {
+        /** @type {Map<Shape, Trit>} */
         const newShapes = new Map();
         for (const pair of this.shapes.entries()) {
             const shape = pair[0];
@@ -412,16 +397,21 @@ class Rule {
             mid = (mid + amount) % 3;
             right = (right + amount) % 3;
             cell = (cell + amount) % 3;
+
+            assertTrit(left);
+            assertTrit(mid);
+            assertTrit(right);
+            assertTrit(cell);
             newShapes.set(toShape(left, mid, right), cell);
         }
         this.shapes = newShapes;
     }
 
     /**
-     * @param {RuleIndex} index 
+     * @param {RuleBoxIndex} index 
      * @returns {Shape}
      */
-    static fromRuleIndex(index) {
+    static fromRuleBoxIndex(index) {
         const left = get_trit(index, 2);
         const mid = get_trit(index, 1);
         const right = get_trit(index, 0);
@@ -435,18 +425,25 @@ class Rule {
     static shapeFromNumericRule(rule) {
         const shapes = new Map();
         for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
-            const shape = Rule.fromRuleIndex(i);
+            assertRuleBoxIndex(i);
+            const shape = Rule.fromRuleBoxIndex(i);
             shapes.set(shape, get_trit(rule, i));
         }
         return shapes
     }
 }
 
-/** @param {Shape} shape */
+/**
+ * @param {Shape} shape 
+ * @returns {[Trit, Trit, Trit]}
+ */
 function fromShape(shape) {
     const left = parseInt(shape[0]);
     const mid = parseInt(shape[1]);
     const right = parseInt(shape[2]);
+    assertTrit(left);
+    assertTrit(mid);
+    assertTrit(right);
     return [left, mid, right];
 }
 
@@ -549,6 +546,7 @@ function populateRow(board, y, initial) {
  */
 function injectRandomness(board, y, randomness_type, percent) {
     for (let x = 0; x < board.width; x++) {
+        /** @type { Trit? } */
         let value = null;
         if (Math.random() < percent) {
             if (randomness_type == "on") { value = 1; }
@@ -769,7 +767,8 @@ function setRuleControls(rule) {
     const ruleNumber = rule.getNumericRule();
     rule_input.value = ruleNumber.toString();
     for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
-        const cell = unwrap(rule.shapes.get(Rule.fromRuleIndex(i)));
+        assertRuleBoxIndex(i);
+        const cell = unwrap(rule.shapes.get(Rule.fromRuleBoxIndex(i)));
         setStateForRuleInput(i, cell);
     }
 
@@ -797,19 +796,51 @@ function invertRule() {
 
 }
 
+/**
+ * @typedef {number & { __brand: "numericRule" }} NumericRule
+ * @param {number} x 
+ * @returns {NumericRule}
+ */
+function numericRule(x) {
+    // @ts-ignore constructor method. There aren't actually any real requirements for
+    // a numeric rule, other than it maybe being an integer
+    // In principle I could bounds check this (between 0 and whatever the maximum unsigned 27-trit
+    // value is but I don't really care enough to do that)
+    return x;
+}
+
+/**
+ * @returns {NumericRule}
+ */
+function getNumericRule() {
+    return numericRule(parseInt(rule_input.value));
+}
+
 function ruleTextboxChanged() {
-    const rule = parseInt(rule_input.value);
+    const rule = getNumericRule();
     RULE.setFromNumericRule(rule)
     setRuleBoxes(rule);
     resetIfNotPlaying();
 }
 
 /**
- * @param {number} i
+ * 
+ * @param {number} x 
+ * @returns {asserts x is Trit}
+ */
+function assertTrit(x) {
+    if (x < 0 || x > 3 || !Number.isInteger(x)) {
+        throw new Error(`Expected a trit, got ${x}!`);
+    }
+}
+
+/**
+ * @param {RuleBoxIndex} i
  */
 function ruleBoxClicked(i) {
     const newState = (getStateFromRuleInput(i) + 1) % 3;
-    // @ts-ignore newState is range 0 to 2 inclusive
+    assertTrit(newState);
+
     setStateForRuleInput(i, newState);
 
     RULE.setRuleIndex(i, newState);
@@ -819,25 +850,37 @@ function ruleBoxClicked(i) {
     resetIfNotPlaying();
 }
 
+
 /**
- * @param {number} numericRule
+ * @param {number} i 
+ * @returns {asserts i is RuleBoxIndex}
+ */
+function assertRuleBoxIndex(i) {
+    if (i < 0 || i > NUM_RULE_CHECKBOXES || !Number.isInteger(i)) {
+        throw new Error(`Expected an integer between 0 and ${NUM_RULE_CHECKBOXES}, got ${i}`);
+    }
+}
+
+/**
+ * @param {NumericRule} numericRule
  */
 function setRuleBoxes(numericRule) {
     for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
+        assertRuleBoxIndex(i);
         setStateForRuleInput(i, get_trit(numericRule, i));
     }
 }
 
 
 /**
- * @param {number} i
+ * @param {RuleBoxIndex} i
  */
 function getStateFromRuleInput(i) {
     return parseInt(RULE_INPUTS[i].dataset.state ?? "0");
 }
 
 /**
- * @param {number} i
+ * @param {RuleBoxIndex} i
  * @param {Trit} state
  */
 function setStateForRuleInput(i, state) {
@@ -1002,14 +1045,13 @@ function getRandomnessType() {
     throw new Error("unreachable");
 }
 
-/**
- * @param {number} num_checkboxes
- */
-function createRuleDiagrams(num_checkboxes) {
+function createRuleDiagrams() {
     const rule_diagrams_element = unwrap(document.querySelector("rule-diagrams"));
     const rule_inputs = [];
 
-    for (let i = 0; i < num_checkboxes; i++) {
+    for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
+        assertRuleBoxIndex(i);
+
         const rule_diagram = document.importNode(rule_diagram_template.content, true);
 
         const rule_input = cast(rule_diagram.querySelector("rule-input"), HTMLElement);
@@ -1127,7 +1169,7 @@ const rule_diagram_template = getTypedElementById('rule-diagram', HTMLTemplateEl
 const NUM_RULE_CHECKBOXES = 27;
 
 /** @type {HTMLElement[]} */
-const RULE_INPUTS = createRuleDiagrams(NUM_RULE_CHECKBOXES);
+const RULE_INPUTS = createRuleDiagrams();
 
 setRuleFromControls();
 resetCanvas();
@@ -1137,3 +1179,4 @@ setRandomnessLabel();
 setColorVar(0);
 setColorVar(1);
 setColorVar(2);
+
