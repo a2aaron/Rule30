@@ -1,181 +1,7 @@
 // @ts-check
 
 
-
-/***********
- * Helpers *
- **********/
-
-/**
- * @template T
- * @typedef { new (...args: any[]) => T } Constructor
- */
-
-
-/**
- * @param { number } x
- * @param { number } smoothness
- * @param { number } inflection_point
-*/
-function smoothStep(x, smoothness, inflection_point) {
-    if (x <= 0.0) { return 0.0; }
-    if (x >= 1.0) { return 1.0; }
-    const c = (1 - smoothness) / (smoothness - 3);
-    if (x <= inflection_point) {
-        const a = x * (1 + c) / (x + inflection_point * c);
-        return x * a ** 2
-    } else {
-        const b = (1 - x) * (1 + c) / ((1 - x) + (1 - inflection_point) * c);
-        return 1 - (1 - x) * (b ** 2);
-    }
-}
-
-/**
- * @param {number} num
- * @param {number} min
- * @param {number} max
- */
-function clamp(num, min, max) {
-    return Math.min(Math.max(num, min), max);
-}
-
-/**
- * @param {number} n
- * @param {number} mod
- */
-function remEuclid(n, mod) {
-    return ((n % mod) + mod) % mod;
-}
-
-
-/**
- * @typedef {0 | 1 | 2} Trit
- * @param {number} x
- * @param {number} i
- * @returns {Trit}
- */
-function get_trit(x, i) {
-    const a = 3 ** (i + 1);
-    const b = 3 ** i;
-    const shifted = (x - a) / b;
-    const trit = Math.floor(remEuclid(shifted, 3));
-    assertTrit(trit);
-    return trit;
-}
-
-
-/**
- * @template {keyof HTMLElementTagNameMap} K
- *
- * @param {K | string} tagName
- * @param {...(Node | string)} children
- * 
- * @overload
- * @param {K} tagName
- * @param {...(Node | string)[]} children
- * @returns {HTMLElementTagNameMap[K]}
- *
- * @overload
- * @param {string} tagName
- * @param {...(Node | string)[]} children
- * @returns {HTMLElement}
- */
-// eslint-disable-next-line no-unused-vars
-function h(tagName, ...children) {
-    const element = document.createElement(tagName);
-    element.append(...children);
-    return element;
-}
-
-
-/**
- * Gets an element `id` and enforces that the element is of type `ty`
- * @template ElementType
- * @param {string} id
- * @param {Constructor<ElementType>} ty
- * @returns {ElementType}
- */
-function getTypedElementById(id, ty) {
-    const element = document.getElementById(id);
-    if (element == null) { throw new Error(`Element with id ${id} not found!`); }
-    if (!(element instanceof ty)) {
-        throw new Error(`Element with id ${id} is type ${element.constructor.name}, wanted ${ty}`);
-    }
-    return element;
-}
-
-
-/**
- * Returns `x`. If `x` is null, an error is thrown.
- * @template T
- * @param {T | null | undefined} x 
- * @return {T}
- */
-function unwrap(x) {
-    if (x == null) {
-        throw new Error("Unwrapped a null value!");
-    } else if (x == undefined) {
-        throw new Error("Unwrapped an undefined value!");
-    }
-    return x;
-}
-
-/**
- * @template T
- * @param {any} value
- * @param {Constructor<T>} ty
- * @returns {T}
- */
-function cast(value, ty) {
-    if (value instanceof ty) {
-        return value;
-    } else {
-        throw new Error(`Expected ${value} to be of type ${ty} but got ${value.constructor.name}`);
-    }
-}
-
-/**
- * @param {function(): void} listener
- * @param {(HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLCanvasElement | HTMLElement)[]} elements
- */
-function addEventListener(listener, ...elements) {
-    for (const element of elements) {
-        if (element instanceof HTMLInputElement) {
-            element.addEventListener("input", () => listener());
-        } else if (element instanceof HTMLButtonElement || element instanceof HTMLCanvasElement) {
-            element.addEventListener("click", () => listener());
-        } else if (element instanceof HTMLSelectElement) {
-            element.addEventListener("change", () => listener());
-        } else {
-            element.addEventListener("click", () => listener());
-        }
-    }
-}
-
-/**
- * @template {HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLCanvasElement} ListenerElementType
- * @param {string} id
- * @param {Constructor<ListenerElementType>} ty
- * @param {(function(): void)[]} listeners
- * @returns {ListenerElementType}
- */
-function getElementAndSetListeners(id, ty, ...listeners) {
-    const element = getTypedElementById(id, ty);
-    for (const listener of listeners) {
-        addEventListener(listener, element);
-    }
-
-    return element;
-}
-
-/**
- * @param {number} min
- * @param {number} max
- */
-function randomRange(min, max) {
-    return Math.random() * (max - min) + min
-}
-
+//#region Helpers - Math
 
 
 /**
@@ -228,13 +54,176 @@ function toHexColorCode(red, green, blue) {
     return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
 }
 
+/**
+ * @param { number } x
+ * @param { number } smoothness
+ * @param { number } inflection_point
+*/
+function smoothStep(x, smoothness, inflection_point) {
+    if (x <= 0.0) { return 0.0; }
+    if (x >= 1.0) { return 1.0; }
+    const c = (1 - smoothness) / (smoothness - 3);
+    if (x <= inflection_point) {
+        const a = x * (1 + c) / (x + inflection_point * c);
+        return x * a ** 2
+    } else {
+        const b = (1 - x) * (1 + c) / ((1 - x) + (1 - inflection_point) * c);
+        return 1 - (1 - x) * (b ** 2);
+    }
+}
+
+/**
+ * @typedef {0 | 1 | 2} Trit
+ * @param {number} x
+ * @param {number} i
+ * @returns {Trit}
+ */
+function get_trit(x, i) {
+    const a = 3 ** (i + 1);
+    const b = 3 ** i;
+    const shifted = (x - a) / b;
+    const trit = Math.floor(remEuclid(shifted, 3));
+    assertTrit(trit);
+    return trit;
+}
+
+/**
+ * @param {number} min
+ * @param {number} max
+ */
+function randomRange(min, max) {
+    return Math.random() * (max - min) + min
+}
+
+/**
+ * @param {number} num
+ * @param {number} min
+ * @param {number} max
+ */
+function clamp(num, min, max) {
+    return Math.min(Math.max(num, min), max);
+}
+
+/**
+ * @param {number} n
+ * @param {number} mod
+ */
+function remEuclid(n, mod) {
+    return ((n % mod) + mod) % mod;
+}
+//#endregion
+
+//#region Helpers - Types & DOM
+/**
+ * @template T
+ * @typedef { new (...args: any[]) => T } Constructor
+ */
 
 
-/************
- * CA Logic *
- ************/
+/**
+ * Returns `x`. If `x` is null, an error is thrown.
+ * @template T
+ * @param {T | null | undefined} x 
+ * @return {T}
+ */
+function unwrap(x) {
+    if (x == null) {
+        throw new Error("Unwrapped a null value!");
+    } else if (x == undefined) {
+        throw new Error("Unwrapped an undefined value!");
+    }
+    return x;
+}
 
+/**
+ * @template T
+ * @param {any} value
+ * @param {Constructor<T>} ty
+ * @returns {T}
+ */
+function cast(value, ty) {
+    if (value instanceof ty) {
+        return value;
+    } else {
+        throw new Error(`Expected ${value} to be of type ${ty} but got ${value.constructor.name}`);
+    }
+}
 
+/**
+ * @template {keyof HTMLElementTagNameMap} K
+ *
+ * @param {K | string} tagName
+ * @param {...(Node | string)} children
+ * 
+ * @overload
+ * @param {K} tagName
+ * @param {...(Node | string)[]} children
+ * @returns {HTMLElementTagNameMap[K]}
+ *
+ * @overload
+ * @param {string} tagName
+ * @param {...(Node | string)[]} children
+ * @returns {HTMLElement}
+ */
+// eslint-disable-next-line no-unused-vars
+function h(tagName, ...children) {
+    const element = document.createElement(tagName);
+    element.append(...children);
+    return element;
+}
+
+/**
+ * @param {function(): void} listener
+ * @param {(HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLCanvasElement | HTMLElement)[]} elements
+ */
+function addEventListener(listener, ...elements) {
+    for (const element of elements) {
+        if (element instanceof HTMLInputElement) {
+            element.addEventListener("input", () => listener());
+        } else if (element instanceof HTMLButtonElement || element instanceof HTMLCanvasElement) {
+            element.addEventListener("click", () => listener());
+        } else if (element instanceof HTMLSelectElement) {
+            element.addEventListener("change", () => listener());
+        } else {
+            element.addEventListener("click", () => listener());
+        }
+    }
+}
+
+/**
+ * @template {HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLCanvasElement} ListenerElementType
+ * @param {string} id
+ * @param {Constructor<ListenerElementType>} ty
+ * @param {(function(): void)[]} listeners
+ * @returns {ListenerElementType}
+ */
+function getElementAndSetListeners(id, ty, ...listeners) {
+    const element = getTypedElementById(id, ty);
+    for (const listener of listeners) {
+        addEventListener(listener, element);
+    }
+
+    return element;
+}
+
+/**
+ * Gets an element `id` and enforces that the element is of type `ty`
+ * @template ElementType
+ * @param {string} id
+ * @param {Constructor<ElementType>} ty
+ * @returns {ElementType}
+ */
+function getTypedElementById(id, ty) {
+    const element = document.getElementById(id);
+    if (element == null) { throw new Error(`Element with id ${id} not found!`); }
+    if (!(element instanceof ty)) {
+        throw new Error(`Element with id ${id} is type ${element.constructor.name}, wanted ${ty}`);
+    }
+    return element;
+}
+//#endregion
+
+//#region CA Logic
 /**
  * @typedef {Trit} Cell
  */
@@ -299,16 +288,6 @@ class Board {
 
 class Rule {
     /**
-     * @typedef {number & { __brand: "ruleBoxIndex" }} RuleBoxIndex
-     * @param {RuleBoxIndex} i
-     * @param {Trit} newState
-     */
-    setRuleIndex(i, newState) {
-        const shape = Rule.fromRuleBoxIndex(i);
-        console.log(shape);
-        this.shapes.set(shape, newState);
-    }
-    /**
      * 
      * @param {BoundaryCondition} boundary 
      * @typedef {string} Shape
@@ -320,22 +299,39 @@ class Rule {
     }
 
     /**
-     * 
-     * @param {Board} board 
-     * @param {number} x 
-     * @param {number} y 
+     * @param {RuleBoxIndex} index 
+     * @returns {Shape}
      */
-    evaluate(board, x, y) {
-        const left = board.getCell(x - 1, y, this.boundary);
-        const mid = board.getCell(x, y, this.boundary);
-        const right = board.getCell(x + 1, y, this.boundary);
-
+    static fromRuleBoxIndex(index) {
+        const left = get_trit(index, 2);
+        const mid = get_trit(index, 1);
+        const right = get_trit(index, 0);
         const shape = toShape(left, mid, right);
-        const value = this.shapes.get(shape);
-        if (value === undefined) {
-            return 0;
+        return shape;
+    }
+
+    /**
+     * @param {number} rule
+     */
+    static shapeFromNumericRule(rule) {
+        const shapes = new Map();
+        for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
+            assertRuleBoxIndex(i);
+            const shape = Rule.fromRuleBoxIndex(i);
+            shapes.set(shape, get_trit(rule, i));
         }
-        return value;
+        return shapes
+    }
+
+    /**
+     * @typedef {number & { __brand: "ruleBoxIndex" }} RuleBoxIndex
+     * @param {RuleBoxIndex} i
+     * @param {Trit} newState
+     */
+    setRuleIndex(i, newState) {
+        const shape = Rule.fromRuleBoxIndex(i);
+        console.log(shape);
+        this.shapes.set(shape, newState);
     }
 
     /**
@@ -362,6 +358,25 @@ class Rule {
         }
 
         return numericRule(rule);
+    }
+
+    /**
+     * 
+     * @param {Board} board 
+     * @param {number} x 
+     * @param {number} y 
+     */
+    evaluate(board, x, y) {
+        const left = board.getCell(x - 1, y, this.boundary);
+        const mid = board.getCell(x, y, this.boundary);
+        const right = board.getCell(x + 1, y, this.boundary);
+
+        const shape = toShape(left, mid, right);
+        const value = this.shapes.get(shape);
+        if (value === undefined) {
+            return 0;
+        }
+        return value;
     }
 
     randomize() {
@@ -405,31 +420,6 @@ class Rule {
             newShapes.set(toShape(left, mid, right), cell);
         }
         this.shapes = newShapes;
-    }
-
-    /**
-     * @param {RuleBoxIndex} index 
-     * @returns {Shape}
-     */
-    static fromRuleBoxIndex(index) {
-        const left = get_trit(index, 2);
-        const mid = get_trit(index, 1);
-        const right = get_trit(index, 0);
-        const shape = toShape(left, mid, right);
-        return shape;
-    }
-
-    /**
-     * @param {number} rule
-     */
-    static shapeFromNumericRule(rule) {
-        const shapes = new Map();
-        for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
-            assertRuleBoxIndex(i);
-            const shape = Rule.fromRuleBoxIndex(i);
-            shapes.set(shape, get_trit(rule, i));
-        }
-        return shapes
     }
 }
 
@@ -539,33 +529,6 @@ function populateRow(board, y, initial) {
 }
 
 /**
- * @param {Board} board
- * @param {number} y
- * @param {RandomnessType} randomness_type
- * @param {number} percent
- */
-function injectRandomness(board, y, randomness_type, percent) {
-    for (let x = 0; x < board.width; x++) {
-        /** @type { Trit? } */
-        let value = null;
-        if (Math.random() < percent) {
-            if (randomness_type == "on") { value = 1; }
-            else if (randomness_type == "off") { value = 0; }
-            else if (randomness_type == "replace") { value = 1; }
-            else if (randomness_type == "flip") {
-                value = board.getCell(x, y) ? 1 : 0;
-            }
-        } else {
-            if (randomness_type == "replace") { value = 0; }
-        }
-
-        if (value != null) {
-            board.setCell(x, y, value);
-        }
-    }
-}
-
-/**
  * Shifts up the canvas by a single pixel.
  * @param {Board} board
  * @param {number} amount
@@ -596,9 +559,35 @@ function computeRow(board, y, rule) {
     }
 }
 
-/****************
- * Render Image *
- ****************/
+/**
+ * @param {Board} board
+ * @param {number} y
+ * @param {RandomnessType} randomness_type
+ * @param {number} percent
+ */
+function injectRandomness(board, y, randomness_type, percent) {
+    for (let x = 0; x < board.width; x++) {
+        /** @type { Trit? } */
+        let value = null;
+        if (Math.random() < percent) {
+            if (randomness_type == "on") { value = 1; }
+            else if (randomness_type == "off") { value = 0; }
+            else if (randomness_type == "replace") { value = 1; }
+            else if (randomness_type == "flip") {
+                value = board.getCell(x, y) ? 1 : 0;
+            }
+        } else {
+            if (randomness_type == "replace") { value = 0; }
+        }
+
+        if (value != null) {
+            board.setCell(x, y, value);
+        }
+    }
+}
+//#endregion
+
+//#region Rendering & Animation
 
 /**
  * @param {CanvasRenderingContext2D} ctx
@@ -645,10 +634,6 @@ function renderBoard(ctx, board) {
 
 }
 
-/*****************************
- * Controls & Event Handlers *
- *****************************/
-
 function render() {
     if (BOARD != null) {
         renderBoard(CTX, BOARD);
@@ -670,52 +655,40 @@ function resetIfNotPlaying() {
     }
 }
 
-function applyControls() {
-    applyLockAspectRatio();
-    applyLockedToCanvas();
-    setExternalCanvasSize();
-    setInternalCanvasSize();
-}
+/**
+ * @param {number} timestamp 
+ */
+function animationLoop(timestamp) {
+    if (ANIMATING) {
+        if (LAST_FRAME == null) {
+            LAST_FRAME = timestamp;
+        }
+        // These are in miliseconds, so divide by 1000 to get seconds.
+        const deltaTime = (timestamp - LAST_FRAME) / 1000;
+        const rowsPerSecond = getRowsPerSecond();
+        const rowsToShift = Math.floor(deltaTime * rowsPerSecond);
 
-function applyLockedToCanvas() {
-    if (lock_internal_size_input.checked) {
-        internal_width_input.disabled = true;
-        internal_height_input.disabled = true;
+        const n = getRule();
+        if (rowsToShift > 0) {
+            const board = unwrap(BOARD);
+            if (ADD_RANDOMNESS) {
+                const percent = getRandomnessAmount();
+                const randomness_type = getRandomnessType();
+                injectRandomness(board, board.height - 1, randomness_type, percent)
+                ADD_RANDOMNESS = false;
+            }
 
-        internal_width_input.value = external_width_input.value;
-        internal_height_input.value = external_height_input.value;
-    } else {
-        internal_width_input.disabled = false;
-        internal_height_input.disabled = false;
+            const boundary = getBoundaryCondition();
+            shiftUp(board, rowsToShift, make_rule(n, boundary));
+            renderBoard(CTX, board);
+
+            // Only record LAST_FRAME if we actually changed anything on the canvas.
+            LAST_FRAME = timestamp;
+        }
+        requestAnimationFrame(animationLoop);
     }
 }
 
-function applyLockAspectRatio() {
-    if (lock_aspect_ratio_input.checked) {
-        external_height_input.disabled = true;
-        external_height_input.value = external_width_input.value;
-    } else {
-        external_height_input.disabled = false;
-    }
-}
-
-function setInternalCanvasSize() {
-    let width = parseFloat(internal_width_input.value);
-    let height = parseFloat(internal_height_input.value);
-
-    width = clamp(width, 1, 9999);
-    height = clamp(height, 1, 9999);
-    if ((CTX.canvas.width != width || CTX.canvas.height != height) && !isNaN(width) && !isNaN(height)) {
-        CTX.canvas.width = width;
-        CTX.canvas.height = height;
-        resetCanvas();
-    }
-}
-
-function setExternalCanvasSize() {
-    CTX.canvas.style.width = `${external_width_input.value}px`;
-    CTX.canvas.style.height = `${external_height_input.value}px`;
-}
 
 function toggleAnimating() {
     if (ANIMATING) {
@@ -736,18 +709,42 @@ function stopAnimationLoop() {
     ANIMATING = false;
     LAST_FRAME = null;
 }
+//#endregion
 
-function setSpeedLabel() {
-    const speedLabel = getTypedElementById("speed-label", HTMLLabelElement);
-    const rowsPerSecond = getRowsPerSecond();
-    speedLabel.textContent = `Speed (${rowsPerSecond.toFixed(0)})`
+//#region Controls - Rule Controls
+
+function createRuleDiagrams() {
+    const rule_diagrams_element = unwrap(document.querySelector("rule-diagrams"));
+    const rule_inputs = [];
+
+    for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
+        assertRuleBoxIndex(i);
+
+        const rule_diagram = document.importNode(rule_diagram_template.content, true);
+
+        const rule_input = cast(rule_diagram.querySelector("rule-input"), HTMLElement);
+        if (rule_input.dataset.state === undefined) {
+            rule_input.dataset.state = "0";
+        }
+        addEventListener(() => ruleBoxClicked(i), rule_input);
+
+        rule_inputs.push(rule_input);
+
+        const rule_boxes = rule_diagram.querySelectorAll("rule-box");
+        for (let j = 0; j < 3; j++) {
+            const rule_box = cast(rule_boxes[j], HTMLElement);
+            // Use 2 - j so that the rightmost box changes first and the leftmost box changes last
+            const state = get_trit(i, 2 - j);
+            rule_box.dataset.state = state.toString();
+        }
+
+        rule_diagrams_element.appendChild(rule_diagram);
+    }
+    return rule_inputs;
 }
 
-function setRandomnessLabel() {
-    const randomnessLabel = getTypedElementById("randomness-label", HTMLLabelElement);
-    const randomness = getRandomnessAmount() * 100;
-    const label = randomness < 10 ? randomness.toFixed(1) : randomness.toFixed(0);
-    randomnessLabel.textContent = `Randomness (${label}%)`
+function getRule() {
+    return parseInt(rule_input.value);
 }
 
 /**
@@ -871,7 +868,6 @@ function setRuleBoxes(numericRule) {
     }
 }
 
-
 /**
  * @param {RuleBoxIndex} i
  */
@@ -890,22 +886,9 @@ function setStateForRuleInput(i, state) {
 function setRuleFromControls() {
     RULE = getRuleFromControls();
 }
+//#endregion
 
-async function copyCanvasToClipboard() {
-    canvas.toBlob(async (blob) => {
-        if (!blob) {
-            console.error("Could not convert canvas to blob?");
-            return;
-        }
-
-        const item = new ClipboardItem({ [blob.type]: blob });
-        await navigator.clipboard.write([item]);
-    }, 'image/png');
-    copied_to_clipboard_message.classList.remove("animate-fade");
-    void copied_to_clipboard_message.offsetWidth; // Required to make the animation actually trigger
-    copied_to_clipboard_message.classList.add("animate-fade");
-}
-
+//#region Controls - Color Picker
 /**
  * @param {number} lightness_min
  * @param {number} lightness_max
@@ -977,9 +960,71 @@ function getColorPicker(state) {
     }
 }
 
-function getRule() {
-    return parseInt(rule_input.value);
+
+//#endregion
+
+//#region Controls & Event Handlers
+function applyControls() {
+    applyLockAspectRatio();
+    applyLockedToCanvas();
+    setExternalCanvasSize();
+    setInternalCanvasSize();
 }
+
+function applyLockedToCanvas() {
+    if (lock_internal_size_input.checked) {
+        internal_width_input.disabled = true;
+        internal_height_input.disabled = true;
+
+        internal_width_input.value = external_width_input.value;
+        internal_height_input.value = external_height_input.value;
+    } else {
+        internal_width_input.disabled = false;
+        internal_height_input.disabled = false;
+    }
+}
+
+function applyLockAspectRatio() {
+    if (lock_aspect_ratio_input.checked) {
+        external_height_input.disabled = true;
+        external_height_input.value = external_width_input.value;
+    } else {
+        external_height_input.disabled = false;
+    }
+}
+
+function setInternalCanvasSize() {
+    let width = parseFloat(internal_width_input.value);
+    let height = parseFloat(internal_height_input.value);
+
+    width = clamp(width, 1, 9999);
+    height = clamp(height, 1, 9999);
+    if ((CTX.canvas.width != width || CTX.canvas.height != height) && !isNaN(width) && !isNaN(height)) {
+        CTX.canvas.width = width;
+        CTX.canvas.height = height;
+        resetCanvas();
+    }
+}
+
+function setExternalCanvasSize() {
+    CTX.canvas.style.width = `${external_width_input.value}px`;
+    CTX.canvas.style.height = `${external_height_input.value}px`;
+}
+
+
+function setSpeedLabel() {
+    const speedLabel = getTypedElementById("speed-label", HTMLLabelElement);
+    const rowsPerSecond = getRowsPerSecond();
+    speedLabel.textContent = `Speed (${rowsPerSecond.toFixed(0)})`
+}
+
+function setRandomnessLabel() {
+    const randomnessLabel = getTypedElementById("randomness-label", HTMLLabelElement);
+    const randomness = getRandomnessAmount() * 100;
+    const label = randomness < 10 ? randomness.toFixed(1) : randomness.toFixed(0);
+    randomnessLabel.textContent = `Randomness (${label}%)`
+}
+
 
 function getRowsPerSecond() {
     const percent = parseFloat(speed_input.value);
@@ -1045,73 +1090,24 @@ function getRandomnessType() {
     throw new Error("unreachable");
 }
 
-function createRuleDiagrams() {
-    const rule_diagrams_element = unwrap(document.querySelector("rule-diagrams"));
-    const rule_inputs = [];
 
-    for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
-        assertRuleBoxIndex(i);
-
-        const rule_diagram = document.importNode(rule_diagram_template.content, true);
-
-        const rule_input = cast(rule_diagram.querySelector("rule-input"), HTMLElement);
-        if (rule_input.dataset.state === undefined) {
-            rule_input.dataset.state = "0";
-        }
-        addEventListener(() => ruleBoxClicked(i), rule_input);
-
-        rule_inputs.push(rule_input);
-
-        const rule_boxes = rule_diagram.querySelectorAll("rule-box");
-        for (let j = 0; j < 3; j++) {
-            const rule_box = cast(rule_boxes[j], HTMLElement);
-            // Use 2 - j so that the rightmost box changes first and the leftmost box changes last
-            const state = get_trit(i, 2 - j);
-            rule_box.dataset.state = state.toString();
+async function copyCanvasToClipboard() {
+    canvas.toBlob(async (blob) => {
+        if (!blob) {
+            console.error("Could not convert canvas to blob?");
+            return;
         }
 
-        rule_diagrams_element.appendChild(rule_diagram);
-    }
-    return rule_inputs;
+        const item = new ClipboardItem({ [blob.type]: blob });
+        await navigator.clipboard.write([item]);
+    }, 'image/png');
+    copied_to_clipboard_message.classList.remove("animate-fade");
+    void copied_to_clipboard_message.offsetWidth; // Required to make the animation actually trigger
+    copied_to_clipboard_message.classList.add("animate-fade");
 }
+//#endregion
 
-/*************
- * Animation *
- *************/
-
-/**
- * @param {number} timestamp 
- */
-function animationLoop(timestamp) {
-    if (ANIMATING) {
-        if (LAST_FRAME == null) {
-            LAST_FRAME = timestamp;
-        }
-        // These are in miliseconds, so divide by 1000 to get seconds.
-        const deltaTime = (timestamp - LAST_FRAME) / 1000;
-        const rowsPerSecond = getRowsPerSecond();
-        const rowsToShift = Math.floor(deltaTime * rowsPerSecond);
-
-        const n = getRule();
-        if (rowsToShift > 0) {
-            const board = unwrap(BOARD);
-            if (ADD_RANDOMNESS) {
-                const percent = getRandomnessAmount();
-                const randomness_type = getRandomnessType();
-                injectRandomness(board, board.height - 1, randomness_type, percent)
-                ADD_RANDOMNESS = false;
-            }
-
-            const boundary = getBoundaryCondition();
-            shiftUp(board, rowsToShift, make_rule(n, boundary));
-            renderBoard(CTX, board);
-
-            // Only record LAST_FRAME if we actually changed anything on the canvas.
-            LAST_FRAME = timestamp;
-        }
-        requestAnimationFrame(animationLoop);
-    }
-}
+//#region Setup
 
 /** @type {Board | null} */
 let BOARD = null;
@@ -1180,3 +1176,5 @@ setColorVar(0);
 setColorVar(1);
 setColorVar(2);
 
+
+//#endregion
