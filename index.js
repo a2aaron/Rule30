@@ -61,13 +61,16 @@ function get_bit(x, i) {
 }
 
 /**
+ * @typedef {0 | 1 | 2} Trit
  * @param {number} x
  * @param {number} i
+ * @returns {Trit}
  */
 function get_trit(x, i) {
     const a = 3 ** (i + 1);
     const b = 3 ** i;
     const shifted = (x - a) / b;
+    // @ts-ignore
     return Math.floor(remEuclid(shifted, 3));
 }
 
@@ -318,6 +321,16 @@ class Board {
 
 class Rule {
     /**
+     * @typedef {number} RuleIndex
+     * @param {number} i
+     * @param {number} newState
+     */
+    setRuleIndex(i, newState) {
+        const shape = Rule.fromRuleIndex(i);
+        console.log(shape);
+        this.shapes.set(shape, newState);
+    }
+    /**
      * 
      * @param {BoundaryCondition} boundary 
      * @typedef {string} Shape
@@ -346,8 +359,96 @@ class Rule {
         }
         return value;
     }
+
+    /**
+     * @param {number} rule
+     */
+    setFromNumericRule(rule) {
+        this.shapes = Rule.shapeFromNumericRule(rule);
+    }
+
+    getNumericRule() {
+        let rule = 0;
+        for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
+            const shape = Rule.fromRuleIndex(i);
+            if (this.shapes.get(shape) === undefined) {
+                console.log(shape);
+            }
+            const cell = unwrap(this.shapes.get(shape));
+            rule += cell * (3 ** i);
+        }
+        return rule;
+    }
+
+    randomize() {
+        const newShapes = new Map();
+        for (const [shape, _cell] of this.shapes.entries()) {
+            const newCell = Math.floor(randomRange(0.0, 3.0));
+            newShapes.set(shape, newCell);
+        }
+        console.log(newShapes);
+        this.shapes = newShapes;
+    }
+
+    flip() {
+        const newShapes = new Map();
+        for (const [shape, cell] of this.shapes.entries()) {
+            const [left, mid, right] = fromShape(shape);
+            newShapes.set(toShape(right, mid, left), cell);
+        }
+        this.shapes = newShapes;
+    }
+
+    /**
+     * @param {number} amount
+     */
+    complement(amount) {
+        const newShapes = new Map();
+        for (const pair of this.shapes.entries()) {
+            const shape = pair[0];
+            let cell = pair[1];
+            let [left, mid, right] = fromShape(shape);
+            left = (left + amount) % 3;
+            mid = (mid + amount) % 3;
+            right = (right + amount) % 3;
+            cell = (cell + amount) % 3;
+            newShapes.set(toShape(left, mid, right), cell);
+        }
+        this.shapes = newShapes;
+    }
+
+    /**
+     * @param {RuleIndex} index 
+     * @returns {Shape}
+     */
+    static fromRuleIndex(index) {
+        const left = get_trit(index, 2);
+        const mid = get_trit(index, 1);
+        const right = get_trit(index, 0);
+        const shape = toShape(left, mid, right);
+        return shape;
+    }
+
+    /**
+     * @param {number} rule
+     */
+    static shapeFromNumericRule(rule) {
+        const shapes = new Map();
+        for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
+            const shape = Rule.fromRuleIndex(i);
+            shapes.set(shape, get_trit(rule, i));
+        }
+        return shapes
+    }
 }
 
+/** @param {Shape} shape */
+function fromShape(shape) {
+    const left = parseInt(shape[0]);
+    const mid = parseInt(shape[1]);
+    const right = parseInt(shape[2]);
+    return [left, mid, right];
+}
 
 /**
  * @param {Cell} left
@@ -366,48 +467,7 @@ function toShape(left, mid, right) {
  * @returns {Rule}
 */
 function make_rule(n, boundary) {
-    /**
-     * @param {Map<Shape, Cell>} shapes
-     * @param {Cell} left
-     * @param {Cell} mid
-     * @param {Cell} right
-     * @param {Cell} value
-     */
-    function addShape(shapes, left, mid, right, value) {
-        const shape = toShape(left, mid, right)
-        shapes.set(shape, value);
-    }
-
-    const shapes = new Map();
-    addShape(shapes, 0, 0, 0, get_trit(n, 0));
-    addShape(shapes, 0, 0, 1, get_trit(n, 1));
-    addShape(shapes, 0, 0, 2, get_trit(n, 2));
-    addShape(shapes, 0, 1, 0, get_trit(n, 3));
-    addShape(shapes, 0, 1, 1, get_trit(n, 4));
-    addShape(shapes, 0, 1, 2, get_trit(n, 5));
-    addShape(shapes, 0, 2, 2, get_trit(n, 6));
-    addShape(shapes, 0, 2, 2, get_trit(n, 7));
-    addShape(shapes, 0, 2, 2, get_trit(n, 8));
-
-    addShape(shapes, 1, 0, 0, get_trit(n, 9));
-    addShape(shapes, 1, 0, 1, get_trit(n, 10));
-    addShape(shapes, 1, 0, 2, get_trit(n, 11));
-    addShape(shapes, 1, 1, 0, get_trit(n, 12));
-    addShape(shapes, 1, 1, 1, get_trit(n, 13));
-    addShape(shapes, 1, 1, 2, get_trit(n, 14));
-    addShape(shapes, 1, 2, 2, get_trit(n, 15));
-    addShape(shapes, 1, 2, 2, get_trit(n, 16));
-    addShape(shapes, 1, 2, 2, get_trit(n, 17));
-
-    addShape(shapes, 2, 0, 0, get_trit(n, 18));
-    addShape(shapes, 2, 0, 1, get_trit(n, 19));
-    addShape(shapes, 2, 0, 2, get_trit(n, 20));
-    addShape(shapes, 2, 1, 0, get_trit(n, 21));
-    addShape(shapes, 2, 1, 1, get_trit(n, 22));
-    addShape(shapes, 2, 1, 2, get_trit(n, 23));
-    addShape(shapes, 2, 2, 2, get_trit(n, 24));
-    addShape(shapes, 2, 2, 2, get_trit(n, 25));
-    addShape(shapes, 2, 2, 2, get_trit(n, 26));
+    const shapes = Rule.shapeFromNumericRule(n);
     return new Rule(boundary, shapes);
 }
 
@@ -538,7 +598,6 @@ function computeRow(board, y, rule) {
     }
 }
 
-
 /****************
  * Render Image *
  ****************/
@@ -600,13 +659,10 @@ function render() {
 
 function resetCanvas() {
     CTX.imageSmoothingEnabled = false;
-    const boundary = getBoundaryCondition();
     const initial = getInitialCondition();
-    const n = getRule();
-    const rule = make_rule(n, boundary);
 
     BOARD = new Board(CTX.canvas.width, CTX.canvas.height);
-    initialize_board(BOARD, rule, initial);
+    initialize_board(BOARD, RULE, initial);
     render();
 }
 
@@ -696,92 +752,82 @@ function setRandomnessLabel() {
     randomnessLabel.textContent = `Randomness (${label}%)`
 }
 
+/**
+ * @returns {Rule}
+ */
+function getRuleFromControls() {
+    const boundary = getBoundaryCondition();
+    const n = getRule();
+    const rule = make_rule(n, boundary);
+    return rule;
+}
+
+/**
+ * @param {Rule} rule 
+ */
+function setRuleControls(rule) {
+    const ruleNumber = rule.getNumericRule();
+    rule_input.value = ruleNumber.toString();
+    for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
+        const cell = unwrap(rule.shapes.get(Rule.fromRuleIndex(i)));
+        setStateForRuleInput(i, cell);
+    }
+
+}
+
 function randomizeRule() {
-    const rule = Math.floor(Math.random() * 3 ** 27);
-    rule_input.value = rule.toFixed(0);
+    RULE.randomize();
+    setRuleControls(RULE);
     resetIfNotPlaying();
-    updateRuleInputs();
 }
 
 function flipRule() {
-    // Exchanges bits 1 and 4 as well as 3 and 6
-    // (which exchanges FFT <-> TFF and FTT <-> TTF)
-    const rule = getRule();
-    const bit0 = get_bit(rule, 0); // FFF
-    const bit1 = get_bit(rule, 1); // FFT, exchange with bit 4
-    const bit2 = get_bit(rule, 2); // FTF
-    const bit3 = get_bit(rule, 3); // FTT, exchange with bit 6
-    const bit4 = get_bit(rule, 4); // TFF, exchange with bit 1
-    const bit5 = get_bit(rule, 5); // TFT
-    const bit6 = get_bit(rule, 6); // TTF, exchange with bit 3
-    const bit7 = get_bit(rule, 7); // TTT
-    const newRule = from_bits(bit0, bit4, bit2, bit6, bit1, bit5, bit3, bit7);
-
-    rule_input.value = newRule.toFixed(0);
+    RULE.flip();
+    setRuleControls(RULE);
     resetIfNotPlaying();
-    updateRuleInputs();
 }
 
 function complementRule() {
-    // Reverses and bitwise NOTs all the bits
-    // This is equivalent to inverting what false and true means for the whole rule.
-    const rule = getRule();
-    const bit0 = get_bit(rule, 0); // FFF, exchange with bit 7
-    const bit1 = get_bit(rule, 1); // FFT, exchange with bit 6
-    const bit2 = get_bit(rule, 2); // FTF, exchange with bit 5
-    const bit3 = get_bit(rule, 3); // FTT, exchange with bit 4
-    const bit4 = get_bit(rule, 4); // TFF, exchange with bit 3
-    const bit5 = get_bit(rule, 5); // TFT, exchange with bit 2
-    const bit6 = get_bit(rule, 6); // TTF, exchange with bit 1
-    const bit7 = get_bit(rule, 7); // TTT, exchange with bit 0
-    const newRule = from_bits(!bit7, !bit6, !bit5, !bit4, !bit3, !bit2, !bit1, !bit0);
-
-    rule_input.value = newRule.toFixed(0);
+    RULE.complement(1);
+    setRuleControls(RULE);
     resetIfNotPlaying();
-    updateRuleInputs();
 }
 
 function invertRule() {
-    // Bitwise NOTs all the bits
-    const rule = getRule();
-    const bit0 = get_bit(rule, 0); // FFF, exchange with bit 7
-    const bit1 = get_bit(rule, 1); // FFT, exchange with bit 6
-    const bit2 = get_bit(rule, 2); // FTF, exchange with bit 5
-    const bit3 = get_bit(rule, 3); // FTT, exchange with bit 4
-    const bit4 = get_bit(rule, 4); // TFF, exchange with bit 3
-    const bit5 = get_bit(rule, 5); // TFT, exchange with bit 2
-    const bit6 = get_bit(rule, 6); // TTF, exchange with bit 1
-    const bit7 = get_bit(rule, 7); // TTT, exchange with bit 0
-    const newRule = from_bits(!bit0, !bit1, !bit2, !bit3, !bit4, !bit5, !bit6, !bit7);
 
-    rule_input.value = newRule.toFixed(0);
+}
+
+function ruleTextboxChanged() {
+    const rule = parseInt(rule_input.value);
+    RULE.setFromNumericRule(rule)
+    setRuleBoxes(rule);
     resetIfNotPlaying();
-    updateRuleInputs();
 }
 
 /**
  * @param {number} i
  */
-function ruleInputClicked(i) {
+function ruleBoxClicked(i) {
     const newState = (getStateFromRuleInput(i) + 1) % 3;
     // @ts-ignore newState is range 0 to 2 inclusive
     setStateForRuleInput(i, newState);
 
-    const rule = getRuleNumberFromRuleBoxes();
-    if (getRule() != rule) {
-        rule_input.value = rule.toFixed(0);
-        resetIfNotPlaying();
+    RULE.setRuleIndex(i, newState);
+    const numericRule = RULE.getNumericRule();
+    console.log(numericRule);
+    rule_input.value = numericRule.toString();
+    resetIfNotPlaying();
+}
+
+/**
+ * @param {number} numericRule
+ */
+function setRuleBoxes(numericRule) {
+    for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
+        setStateForRuleInput(i, get_trit(numericRule, i));
     }
 }
 
-function getRuleNumberFromRuleBoxes() {
-    let rule = 0;
-    for (let i = 0; i < RULE_INPUTS.length; i++) {
-        const state = getStateFromRuleInput(i);
-        rule += state * (3 ** i);
-    }
-    return rule;
-}
 
 /**
  * @param {number} i
@@ -792,17 +838,14 @@ function getStateFromRuleInput(i) {
 
 /**
  * @param {number} i
- * @param {State} state
+ * @param {Trit} state
  */
 function setStateForRuleInput(i, state) {
     RULE_INPUTS[i].dataset.state = state.toString();
 }
 
-function updateRuleInputs() {
-    const rule = getRule();
-    for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
-        RULE_INPUTS[i].dataset.state = get_trit(rule, i).toString();
-    }
+function setRuleFromControls() {
+    RULE = getRuleFromControls();
 }
 
 async function copyCanvasToClipboard() {
@@ -840,8 +883,7 @@ function randomizeAllColors() {
 }
 
 /**
- * @typedef {0 | 1 | 2} State
- * @param {State} state
+ * @param {Trit} state
  */
 function randomizeColorPicker(state) {
     const color = getRandomColorForState(state);
@@ -852,7 +894,7 @@ function randomizeColorPicker(state) {
 }
 
 /**
- * @param {State} state
+ * @param {Trit} state
  */
 function setColorVar(state) {
     const color_picker = getColorPicker(state);
@@ -861,7 +903,7 @@ function setColorVar(state) {
 }
 
 /**
- * @param {State} state
+ * @param {Trit} state
  * @returns {string}
  */
 function getRandomColorForState(state) {
@@ -877,7 +919,7 @@ function getRandomColorForState(state) {
 }
 
 /**
- * @param {State} state
+ * @param {Trit} state
  * @returns {HTMLInputElement}
  */
 function getColorPicker(state) {
@@ -971,7 +1013,10 @@ function createRuleDiagrams(num_checkboxes) {
         const rule_diagram = document.importNode(rule_diagram_template.content, true);
 
         const rule_input = cast(rule_diagram.querySelector("rule-input"), HTMLElement);
-        addEventListener(() => ruleInputClicked(i), rule_input);
+        if (rule_input.dataset.state === undefined) {
+            rule_input.dataset.state = "0";
+        }
+        addEventListener(() => ruleBoxClicked(i), rule_input);
 
         rule_inputs.push(rule_input);
 
@@ -1029,6 +1074,9 @@ function animationLoop(timestamp) {
 /** @type {Board | null} */
 let BOARD = null;
 
+/** @type {Rule} */
+let RULE;
+
 let ANIMATING = false;
 // Note: In miliseconds
 /** @type {number | null} */
@@ -1041,7 +1089,7 @@ let ADD_RANDOMNESS = false;
 const canvas = getElementAndSetListeners('canvas', HTMLCanvasElement, copyCanvasToClipboard);
 const CTX = unwrap(canvas.getContext("2d"));
 
-const rule_input = getElementAndSetListeners('rule', HTMLInputElement, updateRuleInputs, resetIfNotPlaying);
+const rule_input = getElementAndSetListeners('rule', HTMLInputElement, ruleTextboxChanged, resetIfNotPlaying);
 const internal_width_input = getElementAndSetListeners('internal-width', HTMLInputElement, applyControls);
 const internal_height_input = getElementAndSetListeners('internal-height', HTMLInputElement, applyControls, setSpeedLabel);
 const lock_internal_size_input = getElementAndSetListeners('lock-internal-size', HTMLInputElement, setSpeedLabel);
@@ -1081,11 +1129,11 @@ const NUM_RULE_CHECKBOXES = 27;
 /** @type {HTMLElement[]} */
 const RULE_INPUTS = createRuleDiagrams(NUM_RULE_CHECKBOXES);
 
+setRuleFromControls();
 resetCanvas();
 applyControls();
 setSpeedLabel();
 setRandomnessLabel();
-updateRuleInputs();
 setColorVar(0);
 setColorVar(1);
 setColorVar(2);
