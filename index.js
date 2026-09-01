@@ -256,6 +256,16 @@ class Board {
     }
 
     /**
+     * @param {number} width
+     * @param {number} height
+     */
+    resetToSize(width, height) {
+        this.width = width;
+        this.height = height;
+        this.board = new Uint8Array(width * height);
+    }
+
+    /**
      * @param {number} x
      * @param {number} y
      * @param {BoundaryCondition} [boundary]
@@ -706,23 +716,18 @@ function renderBoard(ctx, board) {
 }
 
 function render() {
-    if (BOARD != null) {
-        renderBoard(CTX, BOARD);
-    }
+    requestAnimationFrame(animationLoop);
 }
 
 function resetCanvas() {
-    CTX.imageSmoothingEnabled = false;
-    const initial = getInitialCondition();
-    const boundary = getBoundaryCondition();
-    BOARD = new Board(CTX.canvas.width, CTX.canvas.height);
-    initialize_board(BOARD, RULE, initial, boundary);
+    NEEDS_RESET = true;
     render();
 }
 
 function resetIfNotPlaying() {
     if (!ANIMATING) {
-        resetCanvas();
+        NEEDS_RESET = true;
+        render();
     }
 }
 
@@ -747,6 +752,33 @@ function animationLoop(timestamp) {
         return true;
     }
 
+    /**
+     * @param {Board} board
+     * @param {number} rowsToShift
+     */
+    function updateBoard(board, rowsToShift) {
+        const initial = getInitialCondition();
+        const boundary = getBoundaryCondition();
+
+        if (NEEDS_RESET) {
+            NEEDS_RESET = false;
+            board.resetToSize(CTX.canvas.width, CTX.canvas.height);
+            initialize_board(board, RULE, initial, boundary);
+        }
+
+
+        if (shouldRandomizeRow()) {
+            const percent = getRandomnessAmount();
+            const randomness_type = getRandomnessType();
+            injectRandomness(board, board.height - 1, randomness_type, percent);
+            ADD_RANDOMNESS = false;
+        }
+
+        if (rowsToShift > 0) {
+            shiftUp(board, rowsToShift, RULE, boundary);
+        }
+    }
+
     if (ANIMATING) {
         if (LAST_FRAME == null) {
             LAST_FRAME = timestamp;
@@ -757,23 +789,17 @@ function animationLoop(timestamp) {
         const rowsToShift = Math.floor(deltaTime * rowsPerSecond);
 
         if (rowsToShift > 0) {
-            const board = unwrap(BOARD);
-
-            if (shouldRandomizeRow()) {
-                const percent = getRandomnessAmount();
-                const randomness_type = getRandomnessType();
-                injectRandomness(board, board.height - 1, randomness_type, percent)
-                ADD_RANDOMNESS = false;
-            }
-
-            const boundary = getBoundaryCondition();
-            shiftUp(board, rowsToShift, RULE, boundary);
-            renderBoard(CTX, board);
+            updateBoard(BOARD, rowsToShift);
+            renderBoard(CTX, BOARD);
 
             // Only record LAST_FRAME if we actually changed anything on the canvas.
             LAST_FRAME = timestamp;
         }
-        requestAnimationFrame(animationLoop);
+
+        render();
+    } else {
+        updateBoard(BOARD, 0);
+        renderBoard(CTX, BOARD);
     }
 }
 
@@ -790,7 +816,7 @@ function toggleAnimating() {
 
 function startAnimationLoop() {
     ANIMATING = true;
-    requestAnimationFrame(animationLoop);
+    render();
 }
 
 function stopAnimationLoop() {
@@ -930,7 +956,6 @@ function ruleBoxClicked(i) {
 
     RULE.setByRuleBoxIndex(i, newState);
     const numericRule = RULE.getAsNumericRule();
-    console.log(numericRule);
     rule_input.value = numericRule.toString();
     resetIfNotPlaying();
 }
@@ -1181,8 +1206,7 @@ function getRandomnessType() {
 async function copyCanvasToClipboard() {
     canvas.toBlob(async (blob) => {
         if (!blob) {
-            console.error("Could not convert canvas to blob?");
-            return;
+            throw new Error("Could not convert canvas to blob?");
         }
 
         const item = new ClipboardItem({ [blob.type]: blob });
@@ -1199,6 +1223,8 @@ async function copyCanvasToClipboard() {
 // Canvas
 const canvas = getElementAndSetListeners('canvas', HTMLCanvasElement, copyCanvasToClipboard);
 const CTX = unwrap(canvas.getContext("2d"));
+CTX.imageSmoothingEnabled = false;
+
 const copied_to_clipboard_message = getTypedElementById('copied-to-clipboard-message', HTMLParagraphElement);
 
 // Animation Options
@@ -1252,8 +1278,8 @@ const NUM_RULE_CHECKBOXES = 27;
 /** @type {HTMLElement[]} */
 const RULE_INPUTS = createRuleDiagrams();
 
-/** @type {Board | null} */
-let BOARD = null;
+/** @type {Board} */
+const BOARD = new Board(CTX.canvas.width, CTX.canvas.height);
 
 /** @type {Rule} */
 let RULE = getRuleFromControls();
@@ -1263,7 +1289,7 @@ let ANIMATING = false;
 /** @type {number | null} */
 let LAST_FRAME = null;
 let ADD_RANDOMNESS = false;
-
+let NEEDS_RESET = true;
 
 resetCanvas();
 applyControls();
@@ -1272,5 +1298,5 @@ setRandomnessLabel();
 setColorVar(0);
 setColorVar(1);
 setColorVar(2);
-
+render();
 //#endregion
