@@ -685,6 +685,23 @@ function resetIfNotPlaying() {
  * @param {number} timestamp 
  */
 function animationLoop(timestamp) {
+    function shouldRandomizeRow() {
+        return ADD_RANDOMNESS || (randomize_if_boring_input.checked && bottomRowIsAllSame());
+    }
+
+    function bottomRowIsAllSame() {
+        const board = unwrap(BOARD);
+        const lastRow = board.height - 1;
+
+        const firstCell = board.getCell(0, lastRow)
+        for (let x = 1; x < board.width; x++) {
+            if (firstCell != board.getCell(x, lastRow)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     if (ANIMATING) {
         if (LAST_FRAME == null) {
             LAST_FRAME = timestamp;
@@ -696,7 +713,8 @@ function animationLoop(timestamp) {
 
         if (rowsToShift > 0) {
             const board = unwrap(BOARD);
-            if (ADD_RANDOMNESS) {
+
+            if (shouldRandomizeRow()) {
                 const percent = getRandomnessAmount();
                 const randomness_type = getRandomnessType();
                 injectRandomness(board, board.height - 1, randomness_type, percent)
@@ -1148,6 +1166,7 @@ const _randomize_state_2_color_button = getElementAndSetListeners('randomize-col
 
 const speed_input = getElementAndSetListeners('speed', HTMLInputElement, setSpeedLabel);
 const randomness_input = getElementAndSetListeners('randomness-amount', HTMLInputElement, setRandomnessLabel);
+const randomize_if_boring_input = getTypedElementById('randomize-if-boring', HTMLInputElement);
 
 const boundary_dropdown = getElementAndSetListeners('boundary', HTMLSelectElement, resetIfNotPlaying);
 const initial_dropdown = getElementAndSetListeners('initial', HTMLSelectElement, resetCanvas);
