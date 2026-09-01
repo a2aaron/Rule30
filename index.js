@@ -5,11 +5,13 @@
 
 
 /**
+ * @typedef {[number, number, number]} Color
  * Adapted from https://gist.github.com/earthbound19/e7fe15fdf8ca3ef814750a61bc75b5ce
  * @param {number} lightness
  * @param {number} a
  * @param {number} b
- * @returns {[number, number, number]}
+ * @returns {Color}
+ * 
  */
 function oklab(lightness, a, b) {
     /** @param {number} c */
@@ -287,73 +289,53 @@ class Board {
 }
 
 class Rule {
-    /**
-     * 
-     * @param {BoundaryCondition} boundary 
+    /** 
+     * @param {Map<Shape, Cell>} shapes 
      * @typedef {string} Shape
-     * @param {Map<Shape, Cell>} shapes
      */
-    constructor(boundary, shapes) {
-        this.boundary = boundary;
+    constructor(shapes) {
         this.shapes = shapes;
     }
 
     /**
-     * @param {RuleBoxIndex} index 
-     * @returns {Shape}
+     * @param {NumericRule} rule
+     * @returns {Rule}
      */
-    static fromRuleBoxIndex(index) {
-        const left = get_trit(index, 2);
-        const mid = get_trit(index, 1);
-        const right = get_trit(index, 0);
-        const shape = toShape(left, mid, right);
-        return shape;
-    }
-
-    /**
-     * @param {number} rule
-     */
-    static shapeFromNumericRule(rule) {
+    static fromNumericRule(rule) {
         const shapes = new Map();
         for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
             assertRuleBoxIndex(i);
-            const shape = Rule.fromRuleBoxIndex(i);
+            const shape = Rule.ruleBoxIndexToShape(i);
             shapes.set(shape, get_trit(rule, i));
         }
-        return shapes
+        return new Rule(shapes);
     }
 
     /**
-     * @typedef {number & { __brand: "ruleBoxIndex" }} RuleBoxIndex
-     * @param {RuleBoxIndex} i
-     * @param {Trit} newState
+     * @param {Cell} left
+     * @param {Cell} mid
+     * @param {Cell} right
+     * @returns {Cell}
      */
-    setRuleIndex(i, newState) {
-        const shape = Rule.fromRuleBoxIndex(i);
-        console.log(shape);
-        this.shapes.set(shape, newState);
+    get(left, mid, right) {
+        const shape = Rule.arrayToShape(left, mid, right);
+        return this.getByShape(shape);
     }
 
     /**
-     * @param {NumericRule} rule
+     * @param {Shape} shape
+     * @returns {Cell}
      */
-    setFromNumericRule(rule) {
-        this.shapes = Rule.shapeFromNumericRule(rule);
+    getByShape(shape) {
+        return unwrap(this.shapes.get(shape));
     }
 
-    /**
-     * @returns {NumericRule}
-     */
-    getNumericRule() {
+    /** @returns {NumericRule} */
+    getAsNumericRule() {
         let rule = 0;
         for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
             assertRuleBoxIndex(i);
-            const shape = Rule.fromRuleBoxIndex(i);
-            if (this.shapes.get(shape) === undefined) {
-                console.log(shape);
-            }
-            const cell = unwrap(this.shapes.get(shape));
-
+            const cell = this.getByRuleBoxIndex(i);
             rule += cell * (3 ** i);
         }
 
@@ -361,22 +343,22 @@ class Rule {
     }
 
     /**
-     * 
-     * @param {Board} board 
-     * @param {number} x 
-     * @param {number} y 
+     * @typedef {number & { __brand: "ruleBoxIndex" }} RuleBoxIndex
+     * @param {RuleBoxIndex} i 
+     * @returns {Cell}
      */
-    evaluate(board, x, y) {
-        const left = board.getCell(x - 1, y, this.boundary);
-        const mid = board.getCell(x, y, this.boundary);
-        const right = board.getCell(x + 1, y, this.boundary);
+    getByRuleBoxIndex(i) {
+        const shape = Rule.ruleBoxIndexToShape(i);
+        return unwrap(this.shapes.get(shape));
+    }
 
-        const shape = toShape(left, mid, right);
-        const value = this.shapes.get(shape);
-        if (value === undefined) {
-            return 0;
-        }
-        return value;
+    /**
+     * @param {RuleBoxIndex} i
+     * @param {Cell} value
+     */
+    setByRuleBoxIndex(i, value) {
+        const shape = Rule.ruleBoxIndexToShape(i);
+        this.shapes.set(shape, value);
     }
 
     randomize() {
@@ -385,29 +367,28 @@ class Rule {
             const newCell = Math.floor(randomRange(0.0, 3.0));
             newShapes.set(shape, newCell);
         }
-        console.log(newShapes);
-        this.shapes = newShapes;
+        return new Rule(newShapes);
     }
 
     flip() {
         const newShapes = new Map();
         for (const [shape, cell] of this.shapes.entries()) {
-            const [left, mid, right] = fromShape(shape);
-            newShapes.set(toShape(right, mid, left), cell);
+            const [left, mid, right] = Rule.shapeToArray(shape);
+            const flippedShape = Rule.arrayToShape(right, mid, left);
+            newShapes.set(flippedShape, cell);
         }
-        this.shapes = newShapes;
+        return new Rule(newShapes);
     }
 
     /**
      * @param {number} amount
      */
     complement(amount) {
-        /** @type {Map<Shape, Trit>} */
         const newShapes = new Map();
         for (const pair of this.shapes.entries()) {
             const shape = pair[0];
             let cell = pair[1];
-            let [left, mid, right] = fromShape(shape);
+            let [left, mid, right] = Rule.shapeToArray(shape);
             left = (left + amount) % 3;
             mid = (mid + amount) % 3;
             right = (right + amount) % 3;
@@ -417,45 +398,47 @@ class Rule {
             assertTrit(mid);
             assertTrit(right);
             assertTrit(cell);
-            newShapes.set(toShape(left, mid, right), cell);
+            newShapes.set(Rule.arrayToShape(left, mid, right), cell);
         }
-        this.shapes = newShapes;
+        return new Rule(newShapes);
     }
-}
 
-/**
- * @param {Shape} shape 
- * @returns {[Trit, Trit, Trit]}
- */
-function fromShape(shape) {
-    const left = parseInt(shape[0]);
-    const mid = parseInt(shape[1]);
-    const right = parseInt(shape[2]);
-    assertTrit(left);
-    assertTrit(mid);
-    assertTrit(right);
-    return [left, mid, right];
-}
+    /**
+     * @param {RuleBoxIndex} index 
+     * @returns {Shape}
+     */
+    static ruleBoxIndexToShape(index) {
+        const left = get_trit(index, 2);
+        const mid = get_trit(index, 1);
+        const right = get_trit(index, 0);
+        const shape = Rule.arrayToShape(left, mid, right);
+        return shape;
+    }
 
-/**
- * @param {Cell} left
- * @param {Cell} mid
- * @param {Cell} right
- */
-function toShape(left, mid, right) {
-    const shape = `${left}${mid}${right}`;
-    return shape;
-}
+    /**
+     * @param {Shape} shape 
+     * @returns {[Cell, Cell, Cell]}
+     */
+    static shapeToArray(shape) {
+        const left = parseInt(shape[0]);
+        const mid = parseInt(shape[1]);
+        const right = parseInt(shape[2]);
+        assertTrit(left);
+        assertTrit(mid);
+        assertTrit(right);
+        return [left, mid, right];
+    }
 
-/**
- * Construct rule `n` (eg: rule 30, rule 90, etc)
- * @param {number} n 
- * @param {BoundaryCondition} boundary
- * @returns {Rule}
-*/
-function make_rule(n, boundary) {
-    const shapes = Rule.shapeFromNumericRule(n);
-    return new Rule(boundary, shapes);
+    /**
+     * @param {Cell} left
+     * @param {Cell} mid
+     * @param {Cell} right
+     */
+    static arrayToShape(left, mid, right) {
+        const shape = `${left}${mid}${right}`;
+        return shape;
+    }
+
 }
 
 
@@ -463,14 +446,15 @@ function make_rule(n, boundary) {
  * @param {Board} board
  * @param {Rule} rule
  * @param {InitialCondition} initial
+ * @param {BoundaryCondition} boundary
  */
-function initialize_board(board, rule, initial) {
+function initialize_board(board, rule, initial, boundary) {
     // Populate initial row
     populateRow(board, 0, initial);
 
     // Draw the rest of the rows
     for (let y = 1; y < board.height; y++) {
-        computeRow(board, y, rule);
+        computeRow(board, rule, boundary, y);
     }
 }
 
@@ -533,8 +517,9 @@ function populateRow(board, y, initial) {
  * @param {Board} board
  * @param {number} amount
  * @param {Rule} rule
+ * @param {BoundaryCondition} boundary
  */
-function shiftUp(board, amount, rule) {
+function shiftUp(board, amount, rule, boundary) {
     // Prevent scrolling the entire canvas offscreen
     if (amount >= board.height) {
         amount = board.height - 1;
@@ -543,20 +528,41 @@ function shiftUp(board, amount, rule) {
     board.board.copyWithin(0, board.width * amount);
 
     for (let y = board.height - amount; y < board.height; y++) {
-        computeRow(board, y, rule);
+        computeRow(board, rule, boundary, y);
     }
 }
 
 /**
  * @param {Board} board
- * @param {number} y
  * @param {Rule} rule
+ * @param {BoundaryCondition} boundary
+ * @param {number} y
  */
-function computeRow(board, y, rule) {
+function computeRow(board, rule, boundary, y) {
     for (let x = 0; x < board.width; x++) {
-        const cell = rule.evaluate(board, x, y - 1);
+        const cell = evaluate(board, rule, boundary, x, y - 1);
         board.setCell(x, y, cell);
     }
+}
+
+/**
+ * 
+ * @param {Board} board 
+ * @param {Rule} rule
+ * @param {BoundaryCondition} boundary
+ * @param {number} x 
+ * @param {number} y 
+ */
+function evaluate(board, rule, boundary, x, y) {
+    const left = board.getCell(x - 1, y, boundary);
+    const mid = board.getCell(x, y, boundary);
+    const right = board.getCell(x + 1, y, boundary);
+
+    const value = rule.get(left, mid, right);
+    if (value === undefined) {
+        return 0;
+    }
+    return value;
 }
 
 /**
@@ -643,9 +649,9 @@ function render() {
 function resetCanvas() {
     CTX.imageSmoothingEnabled = false;
     const initial = getInitialCondition();
-
+    const boundary = getBoundaryCondition();
     BOARD = new Board(CTX.canvas.width, CTX.canvas.height);
-    initialize_board(BOARD, RULE, initial);
+    initialize_board(BOARD, RULE, initial, boundary);
     render();
 }
 
@@ -668,7 +674,6 @@ function animationLoop(timestamp) {
         const rowsPerSecond = getRowsPerSecond();
         const rowsToShift = Math.floor(deltaTime * rowsPerSecond);
 
-        const n = getRule();
         if (rowsToShift > 0) {
             const board = unwrap(BOARD);
             if (ADD_RANDOMNESS) {
@@ -679,7 +684,7 @@ function animationLoop(timestamp) {
             }
 
             const boundary = getBoundaryCondition();
-            shiftUp(board, rowsToShift, make_rule(n, boundary));
+            shiftUp(board, rowsToShift, RULE, boundary);
             renderBoard(CTX, board);
 
             // Only record LAST_FRAME if we actually changed anything on the canvas.
@@ -743,67 +748,47 @@ function createRuleDiagrams() {
     return rule_inputs;
 }
 
-function getRule() {
-    return parseInt(rule_input.value);
-}
-
 /**
  * @returns {Rule}
  */
 function getRuleFromControls() {
-    const boundary = getBoundaryCondition();
-    const n = getRule();
-    const rule = make_rule(n, boundary);
-    return rule;
+    const n = getNumericRule();
+    return Rule.fromNumericRule(n);
 }
 
 /**
  * @param {Rule} rule 
  */
 function setRuleControls(rule) {
-    const ruleNumber = rule.getNumericRule();
-    rule_input.value = ruleNumber.toString();
+    const numericRule = rule.getAsNumericRule();
+    rule_input.value = numericRule.toString();
     for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
         assertRuleBoxIndex(i);
-        const cell = unwrap(rule.shapes.get(Rule.fromRuleBoxIndex(i)));
-        setStateForRuleInput(i, cell);
+        const cell = rule.getByRuleBoxIndex(i);
+        setRuleBox(i, cell);
     }
-
 }
 
 function randomizeRule() {
-    RULE.randomize();
+    RULE = RULE.randomize();
     setRuleControls(RULE);
     resetIfNotPlaying();
 }
 
 function flipRule() {
-    RULE.flip();
+    RULE = RULE.flip();
     setRuleControls(RULE);
     resetIfNotPlaying();
 }
 
 function complementRule() {
-    RULE.complement(1);
+    RULE = RULE.complement(1);
     setRuleControls(RULE);
     resetIfNotPlaying();
 }
 
 function invertRule() {
 
-}
-
-/**
- * @typedef {number & { __brand: "numericRule" }} NumericRule
- * @param {number} x 
- * @returns {NumericRule}
- */
-function numericRule(x) {
-    // @ts-ignore constructor method. There aren't actually any real requirements for
-    // a numeric rule, other than it maybe being an integer
-    // In principle I could bounds check this (between 0 and whatever the maximum unsigned 27-trit
-    // value is but I don't really care enough to do that)
-    return x;
 }
 
 /**
@@ -814,8 +799,16 @@ function getNumericRule() {
 }
 
 function ruleTextboxChanged() {
+    /** @param {NumericRule} numericRule */
+    function setRuleBoxes(numericRule) {
+        for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
+            assertRuleBoxIndex(i);
+            setRuleBox(i, get_trit(numericRule, i));
+        }
+    }
+
     const rule = getNumericRule();
-    RULE.setFromNumericRule(rule)
+    RULE = Rule.fromNumericRule(rule)
     setRuleBoxes(rule);
     resetIfNotPlaying();
 }
@@ -838,10 +831,10 @@ function ruleBoxClicked(i) {
     const newState = (getStateFromRuleInput(i) + 1) % 3;
     assertTrit(newState);
 
-    setStateForRuleInput(i, newState);
+    setRuleBox(i, newState);
 
-    RULE.setRuleIndex(i, newState);
-    const numericRule = RULE.getNumericRule();
+    RULE.setByRuleBoxIndex(i, newState);
+    const numericRule = RULE.getAsNumericRule();
     console.log(numericRule);
     rule_input.value = numericRule.toString();
     resetIfNotPlaying();
@@ -858,19 +851,7 @@ function assertRuleBoxIndex(i) {
     }
 }
 
-/**
- * @param {NumericRule} numericRule
- */
-function setRuleBoxes(numericRule) {
-    for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {
-        assertRuleBoxIndex(i);
-        setStateForRuleInput(i, get_trit(numericRule, i));
-    }
-}
-
-/**
- * @param {RuleBoxIndex} i
- */
+/** @param {RuleBoxIndex} i */
 function getStateFromRuleInput(i) {
     return parseInt(RULE_INPUTS[i].dataset.state ?? "0");
 }
@@ -879,12 +860,21 @@ function getStateFromRuleInput(i) {
  * @param {RuleBoxIndex} i
  * @param {Trit} state
  */
-function setStateForRuleInput(i, state) {
+function setRuleBox(i, state) {
     RULE_INPUTS[i].dataset.state = state.toString();
 }
 
-function setRuleFromControls() {
-    RULE = getRuleFromControls();
+/**
+ * @typedef {number & { __brand: "numericRule" }} NumericRule
+ * @param {number} x 
+ * @returns {NumericRule}
+ */
+function numericRule(x) {
+    // @ts-ignore constructor method. There aren't actually any real requirements for
+    // a numeric rule, other than it maybe being an integer
+    // In principle I could bounds check this (between 0 and whatever the maximum unsigned 27-trit
+    // value is but I don't really care enough to do that)
+    return x;
 }
 //#endregion
 
@@ -959,8 +949,6 @@ function getColorPicker(state) {
         throw new Error("unreachable");
     }
 }
-
-
 //#endregion
 
 //#region Controls & Event Handlers
@@ -1108,22 +1096,6 @@ async function copyCanvasToClipboard() {
 //#endregion
 
 //#region Setup
-
-/** @type {Board | null} */
-let BOARD = null;
-
-/** @type {Rule} */
-let RULE;
-
-let ANIMATING = false;
-// Note: In miliseconds
-/** @type {number | null} */
-let LAST_FRAME = null;
-let ADD_RANDOMNESS = false;
-
-/** @typedef {[number, number, number]} Color */
-
-
 const canvas = getElementAndSetListeners('canvas', HTMLCanvasElement, copyCanvasToClipboard);
 const CTX = unwrap(canvas.getContext("2d"));
 
@@ -1167,7 +1139,20 @@ const NUM_RULE_CHECKBOXES = 27;
 /** @type {HTMLElement[]} */
 const RULE_INPUTS = createRuleDiagrams();
 
-setRuleFromControls();
+
+/** @type {Board | null} */
+let BOARD = null;
+
+/** @type {Rule} */
+let RULE = getRuleFromControls();
+
+let ANIMATING = false;
+// Note: In miliseconds
+/** @type {number | null} */
+let LAST_FRAME = null;
+let ADD_RANDOMNESS = false;
+
+
 resetCanvas();
 applyControls();
 setSpeedLabel();
@@ -1175,6 +1160,5 @@ setRandomnessLabel();
 setColorVar(0);
 setColorVar(1);
 setColorVar(2);
-
 
 //#endregion
