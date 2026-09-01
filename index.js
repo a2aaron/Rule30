@@ -592,18 +592,36 @@ function evaluate(board, rule, boundary, x, y) {
  * @param {number} percent
  */
 function injectRandomness(board, y, randomness_type, percent) {
+    function randomTrit() {
+        const trit = Math.floor(randomRange(0, 3));
+        assertTrit(trit);
+        return trit;
+    }
+
+    /** @param {Trit} trit */
+    function cycleTrit(trit) {
+        const newTrit = (trit + 1) % 3;
+        assertTrit(newTrit);
+        return newTrit;
+    }
+
+
     for (let x = 0; x < board.width; x++) {
         /** @type { Trit? } */
         let value = null;
         if (Math.random() < percent) {
-            if (randomness_type == "on") { value = 1; }
-            else if (randomness_type == "off") { value = 0; }
-            else if (randomness_type == "replace") { value = 1; }
-            else if (randomness_type == "flip") {
-                value = board.getCell(x, y) ? 1 : 0;
+            switch (randomness_type) {
+                case "state_0": value = 0;
+                    break;
+                case "state_1": value = 1;
+                    break;
+                case "state_2": value = 2;
+                    break;
+                case "replace": value = randomTrit();
+                    break;
+                case "cycle": value = cycleTrit(board.getCell(x, y));
+                    break;
             }
-        } else {
-            if (randomness_type == "replace") { value = 0; }
         }
 
         if (value != null) {
@@ -1107,12 +1125,16 @@ function getInitialCondition() {
 }
 
 /**
- * @typedef {"on" | "off" | "replace" | "flip"} RandomnessType
+ * @typedef { "state_0" | "state_1" | "state_2" | "replace" | "cycle" } RandomnessType
  * @returns {RandomnessType}
  */
 function getRandomnessType() {
     const randomnessType = randomness_type_dropdown.value;
-    if (randomnessType == "on" || randomnessType == "off" || randomnessType == "replace" || randomnessType == "flip") {
+    if (randomnessType == "state_0" ||
+        randomnessType == "state_1" ||
+        randomnessType == "state_2" ||
+        randomnessType == "replace" ||
+        randomnessType == "cycle") {
         return randomnessType;
     }
     throw new Error("unreachable");
