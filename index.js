@@ -98,6 +98,21 @@ function randomRange(min, max) {
 }
 
 /**
+ * @param {number} min
+ * @param {number} max
+ */
+function randomRangeInt(min, max) {
+    return Math.floor(randomRange(min, max));
+}
+
+/** @returns {Trit} */
+function randomTrit() {
+    const trit = randomRangeInt(0, 3);
+    assertTrit(trit);
+    return trit;
+}
+
+/**
  * @param {number} num
  * @param {number} min
  * @param {number} max
@@ -364,13 +379,29 @@ class Rule {
     randomize() {
         const newShapes = new Map();
         for (const [shape, _cell] of this.shapes.entries()) {
-            const newCell = Math.floor(randomRange(0.0, 3.0));
+            const newCell = randomTrit();
             newShapes.set(shape, newCell);
         }
         return new Rule(newShapes);
     }
 
+    mutate() {
+        /** @type {Map<Shape, Cell>} */
+        const newShapes = new Map();
+        for (const [shape, cell] of this.shapes.entries()) {
+            newShapes.set(shape, cell);
+        }
+
+        const i = randomRangeInt(0, newShapes.size);
+        const randomShape = [...newShapes.keys()][i];
+        const newCell = randomTrit();
+        newShapes.set(randomShape, newCell);
+
+        return new Rule(newShapes);
+    }
+
     flip() {
+        /** @type {Map<Shape, Cell>} */
         const newShapes = new Map();
         for (const [shape, cell] of this.shapes.entries()) {
             const [left, mid, right] = Rule.shapeToArray(shape);
@@ -384,6 +415,7 @@ class Rule {
      * @param {number} amount
      */
     complement(amount) {
+        /** @type {Map<Shape, Cell>} */
         const newShapes = new Map();
         for (const pair of this.shapes.entries()) {
             const shape = pair[0];
@@ -407,6 +439,7 @@ class Rule {
      * @param {number} amount
      */
     bitwise_add(amount) {
+        /** @type {Map<Shape, Cell>} */
         const newShapes = new Map();
         for (const pair of this.shapes.entries()) {
             const shape = pair[0];
@@ -592,12 +625,6 @@ function evaluate(board, rule, boundary, x, y) {
  * @param {number} percent
  */
 function injectRandomness(board, y, randomness_type, percent) {
-    function randomTrit() {
-        const trit = Math.floor(randomRange(0, 3));
-        assertTrit(trit);
-        return trit;
-    }
-
     /** @param {Trit} trit */
     function cycleTrit(trit) {
         const newTrit = (trit + 1) % 3;
@@ -827,6 +854,16 @@ function setRuleControls(rule) {
 
 function randomizeRule() {
     RULE = RULE.randomize();
+    setRuleControls(RULE);
+    resetIfNotPlaying();
+
+    if (randomize_colors_also_input.checked) {
+        randomizeAllColors();
+    }
+}
+
+function mutateRule() {
+    RULE = RULE.mutate();
     setRuleControls(RULE);
     resetIfNotPlaying();
 }
@@ -1177,6 +1214,7 @@ const play_button = getElementAndSetListeners('play', HTMLButtonElement, toggleA
 const _reset_button = getElementAndSetListeners('reset', HTMLButtonElement, resetCanvas);
 const _inject_randomness_button = getElementAndSetListeners('inject-randomness', HTMLButtonElement, () => ADD_RANDOMNESS = true);
 const _randomize_rule_button = getElementAndSetListeners('randomize-rule', HTMLButtonElement, randomizeRule);
+const _mutate_rule_button = getElementAndSetListeners('mutate-rule', HTMLButtonElement, mutateRule);
 const _flip_rule_button = getElementAndSetListeners('flip-rule', HTMLButtonElement, flipRule);
 const _completement_rule_button = getElementAndSetListeners('complement-rule', HTMLButtonElement, complementRule);
 const _cycle_rule_button = getElementAndSetListeners('cycle-rule', HTMLButtonElement, cycleRule);
@@ -1185,6 +1223,8 @@ const _randomize_both_colors_button = getElementAndSetListeners('randomize-all-c
 const _randomize_state_0_color_button = getElementAndSetListeners('randomize-color-state-0', HTMLButtonElement, () => { randomizeColorPicker(0); render(); });
 const _randomize_state_1_color_button = getElementAndSetListeners('randomize-color-state-1', HTMLButtonElement, () => { randomizeColorPicker(1); render(); });
 const _randomize_state_2_color_button = getElementAndSetListeners('randomize-color-state-2', HTMLButtonElement, () => { randomizeColorPicker(2); render(); });
+
+const randomize_colors_also_input = getTypedElementById('randomize-colors-also', HTMLInputElement);
 
 const speed_input = getElementAndSetListeners('speed', HTMLInputElement, setSpeedLabel);
 const randomness_input = getElementAndSetListeners('randomness-amount', HTMLInputElement, setRandomnessLabel);
