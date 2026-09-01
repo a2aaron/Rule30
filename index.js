@@ -1195,23 +1195,31 @@ async function copyCanvasToClipboard() {
 //#endregion
 
 //#region Setup
+
+// Canvas
 const canvas = getElementAndSetListeners('canvas', HTMLCanvasElement, copyCanvasToClipboard);
 const CTX = unwrap(canvas.getContext("2d"));
+const copied_to_clipboard_message = getTypedElementById('copied-to-clipboard-message', HTMLParagraphElement);
 
-const rule_input = getElementAndSetListeners('rule', HTMLInputElement, ruleTextboxChanged, resetIfNotPlaying);
-const internal_width_input = getElementAndSetListeners('internal-width', HTMLInputElement, applyControls);
-const internal_height_input = getElementAndSetListeners('internal-height', HTMLInputElement, applyControls, setSpeedLabel);
-const lock_internal_size_input = getElementAndSetListeners('lock-internal-size', HTMLInputElement, setSpeedLabel);
-const external_width_input = getElementAndSetListeners('external-width', HTMLInputElement, applyControls);
-const external_height_input = getElementAndSetListeners('external-height', HTMLInputElement, applyControls);
-const lock_aspect_ratio_input = getElementAndSetListeners('lock-aspect-ratio', HTMLInputElement, applyControls);
-
-const color_state_0_input = getElementAndSetListeners('color-state-0', HTMLInputElement, () => { setColorVar(0); render(); });
-const color_state_1_input = getElementAndSetListeners('color-state-1', HTMLInputElement, () => { setColorVar(1); render(); });
-const color_state_2_input = getElementAndSetListeners('color-state-2', HTMLInputElement, () => { setColorVar(2); render(); });
-
+// Animation Options
 const play_button = getElementAndSetListeners('play', HTMLButtonElement, toggleAnimating);
 const _reset_button = getElementAndSetListeners('reset', HTMLButtonElement, resetCanvas);
+const speed_input = getElementAndSetListeners('speed', HTMLInputElement, setSpeedLabel);
+
+// Randomization Options
+const randomness_input = getElementAndSetListeners('randomness-amount', HTMLInputElement, setRandomnessLabel);
+const randomize_if_boring_input = getTypedElementById('randomize-if-boring', HTMLInputElement);
+const randomness_type_dropdown = getElementAndSetListeners('randomness-type', HTMLSelectElement);
+
+// Rule Options
+const rule_input = getElementAndSetListeners('rule', HTMLInputElement, ruleTextboxChanged, resetIfNotPlaying);
+const rule_diagram_template = getTypedElementById('rule-diagram', HTMLTemplateElement);
+const boundary_dropdown = getElementAndSetListeners('boundary', HTMLSelectElement, resetIfNotPlaying);
+const initial_dropdown = getElementAndSetListeners('initial', HTMLSelectElement, resetCanvas);
+
+// Rule Options - Randomizations
+const randomize_colors_also_input = getTypedElementById('randomize-colors-also', HTMLInputElement);
+
 const _inject_randomness_button = getElementAndSetListeners('inject-randomness', HTMLButtonElement, () => ADD_RANDOMNESS = true);
 const _randomize_rule_button = getElementAndSetListeners('randomize-rule', HTMLButtonElement, randomizeRule);
 const _mutate_rule_button = getElementAndSetListeners('mutate-rule', HTMLButtonElement, mutateRule);
@@ -1219,29 +1227,30 @@ const _flip_rule_button = getElementAndSetListeners('flip-rule', HTMLButtonEleme
 const _completement_rule_button = getElementAndSetListeners('complement-rule', HTMLButtonElement, complementRule);
 const _cycle_rule_button = getElementAndSetListeners('cycle-rule', HTMLButtonElement, cycleRule);
 
+// Canvas Options - Canvas Size
+const internal_width_input = getElementAndSetListeners('internal-width', HTMLInputElement, applyControls);
+const internal_height_input = getElementAndSetListeners('internal-height', HTMLInputElement, applyControls, setSpeedLabel);
+const lock_internal_size_input = getElementAndSetListeners('lock-internal-size', HTMLInputElement, setSpeedLabel);
+const external_width_input = getElementAndSetListeners('external-width', HTMLInputElement, applyControls);
+const external_height_input = getElementAndSetListeners('external-height', HTMLInputElement, applyControls);
+const lock_aspect_ratio_input = getElementAndSetListeners('lock-aspect-ratio', HTMLInputElement, applyControls);
+
+// Canvas Options - Randomize Colors
 const _randomize_both_colors_button = getElementAndSetListeners('randomize-all-colors', HTMLButtonElement, () => { randomizeAllColors(); render(); });
 const _randomize_state_0_color_button = getElementAndSetListeners('randomize-color-state-0', HTMLButtonElement, () => { randomizeColorPicker(0); render(); });
 const _randomize_state_1_color_button = getElementAndSetListeners('randomize-color-state-1', HTMLButtonElement, () => { randomizeColorPicker(1); render(); });
 const _randomize_state_2_color_button = getElementAndSetListeners('randomize-color-state-2', HTMLButtonElement, () => { randomizeColorPicker(2); render(); });
 
-const randomize_colors_also_input = getTypedElementById('randomize-colors-also', HTMLInputElement);
+// Canvas Options - Colorpickers
+const color_state_0_input = getElementAndSetListeners('color-state-0', HTMLInputElement, () => { setColorVar(0); render(); });
+const color_state_1_input = getElementAndSetListeners('color-state-1', HTMLInputElement, () => { setColorVar(1); render(); });
+const color_state_2_input = getElementAndSetListeners('color-state-2', HTMLInputElement, () => { setColorVar(2); render(); });
 
-const speed_input = getElementAndSetListeners('speed', HTMLInputElement, setSpeedLabel);
-const randomness_input = getElementAndSetListeners('randomness-amount', HTMLInputElement, setRandomnessLabel);
-const randomize_if_boring_input = getTypedElementById('randomize-if-boring', HTMLInputElement);
 
-const boundary_dropdown = getElementAndSetListeners('boundary', HTMLSelectElement, resetIfNotPlaying);
-const initial_dropdown = getElementAndSetListeners('initial', HTMLSelectElement, resetCanvas);
-const randomness_type_dropdown = getElementAndSetListeners('randomness-type', HTMLSelectElement);
-
-const copied_to_clipboard_message = getTypedElementById('copied-to-clipboard-message', HTMLParagraphElement);
-
-const rule_diagram_template = getTypedElementById('rule-diagram', HTMLTemplateElement);
 const NUM_RULE_CHECKBOXES = 27;
 
 /** @type {HTMLElement[]} */
 const RULE_INPUTS = createRuleDiagrams();
-
 
 /** @type {Board | null} */
 let BOARD = null;
