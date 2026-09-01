@@ -404,6 +404,26 @@ class Rule {
     }
 
     /**
+     * @param {number} amount
+     */
+    bitwise_add(amount) {
+        const newShapes = new Map();
+        for (const pair of this.shapes.entries()) {
+            const shape = pair[0];
+            let cell = pair[1];
+            const [left, mid, right] = Rule.shapeToArray(shape);
+            cell = (cell + amount) % 3;
+
+            assertTrit(left);
+            assertTrit(mid);
+            assertTrit(right);
+            assertTrit(cell);
+            newShapes.set(Rule.arrayToShape(left, mid, right), cell);
+        }
+        return new Rule(newShapes);
+    }
+
+    /**
      * @param {RuleBoxIndex} index 
      * @returns {Shape}
      */
@@ -787,8 +807,10 @@ function complementRule() {
     resetIfNotPlaying();
 }
 
-function invertRule() {
-
+function cycleRule() {
+    RULE = RULE.bitwise_add(1);
+    setRuleControls(RULE);
+    resetIfNotPlaying();
 }
 
 /**
@@ -1117,7 +1139,7 @@ const _inject_randomness_button = getElementAndSetListeners('inject-randomness',
 const _randomize_rule_button = getElementAndSetListeners('randomize-rule', HTMLButtonElement, randomizeRule);
 const _flip_rule_button = getElementAndSetListeners('flip-rule', HTMLButtonElement, flipRule);
 const _completement_rule_button = getElementAndSetListeners('complement-rule', HTMLButtonElement, complementRule);
-const _invert_rule_button = getElementAndSetListeners('invert-rule', HTMLButtonElement, invertRule);
+const _cycle_rule_button = getElementAndSetListeners('cycle-rule', HTMLButtonElement, cycleRule);
 
 const _randomize_both_colors_button = getElementAndSetListeners('randomize-all-colors', HTMLButtonElement, () => { randomizeAllColors(); render(); });
 const _randomize_state_0_color_button = getElementAndSetListeners('randomize-color-state-0', HTMLButtonElement, () => { randomizeColorPicker(0); render(); });
