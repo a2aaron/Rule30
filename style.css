@@ -1,6 +1,6 @@
 main {
     display: grid;
-    grid-template-columns: fit-content(0) 300px;
+    grid-template-columns: fit-content(0) fit-content(0);
     place-content: center;
     gap: 1em;
 }
@@ -14,7 +14,7 @@ canvas {
 
 ui-grid {
     display: grid;
-    grid-template-columns: 150px fit-content(0);
+    grid-template-columns: 200px fit-content(0);
     align-items: center;
     gap: 0.5em;
     height: max-content;
