@@ -404,7 +404,12 @@ class Rule {
 
         const i = randomRangeInt(0, newShapes.size);
         const randomShape = [...newShapes.keys()][i];
-        const newCell = randomTrit();
+
+
+        let newCell = randomTrit();
+        while (newCell == newShapes.get(randomShape)) {
+            newCell = randomTrit(); // force newCell to not be identical to the existing cell.
+        }
         newShapes.set(randomShape, newCell);
 
         return new Rule(newShapes);
@@ -878,10 +883,19 @@ function setRuleControls(rule) {
     }
 }
 
-function randomizeRule() {
-    RULE = RULE.randomize();
+/**
+ * @param {Rule} newRule
+ */
+function setRule(newRule) {
+    RULE = newRule;
     setRuleControls(RULE);
     resetIfNotPlaying();
+}
+
+function randomizeRule() {
+    const newRule = RULE.randomize();
+    setRule(newRule);
+    addToHistory(newRule);
 
     if (randomize_colors_also_input.checked) {
         randomizeAllColors();
@@ -889,27 +903,21 @@ function randomizeRule() {
 }
 
 function mutateRule() {
-    RULE = RULE.mutate();
-    setRuleControls(RULE);
-    resetIfNotPlaying();
+    const newRule = RULE.mutate();
+    setRule(newRule);
+    addToHistory(newRule);
 }
 
 function flipRule() {
-    RULE = RULE.flip();
-    setRuleControls(RULE);
-    resetIfNotPlaying();
+    setRule(RULE.flip());
 }
 
 function complementRule() {
-    RULE = RULE.complement(1);
-    setRuleControls(RULE);
-    resetIfNotPlaying();
+    setRule(RULE.complement(1));
 }
 
 function cycleRule() {
-    RULE = RULE.bitwise_add(1);
-    setRuleControls(RULE);
-    resetIfNotPlaying();
+    setRule(RULE.bitwise_add(1));
 }
 
 /**
@@ -951,7 +959,6 @@ function assertTrit(x) {
 function ruleBoxClicked(i) {
     const newState = (getStateFromRuleInput(i) + 1) % 3;
     assertTrit(newState);
-
     setRuleBox(i, newState);
 
     RULE.setByRuleBoxIndex(i, newState);
@@ -1218,7 +1225,49 @@ async function copyCanvasToClipboard() {
 }
 //#endregion
 
+//#region Controls - Keyboard & History
+
+/**
+ * @param {KeyboardEvent} event
+ */
+function handleKeyPress(event) {
+    if (event.code == "Space") {
+        event.preventDefault();
+        toggleAnimating();
+    } else if (event.code == "ArrowLeft") {
+        event.preventDefault();
+        if (HISTORY_CURSOR > 0) {
+            HISTORY_CURSOR -= 1;
+            const newLocal = HISTORY[HISTORY_CURSOR];
+            setRule(newLocal);
+        }
+    } else if (event.code == "ArrowRight") {
+        event.preventDefault();
+        if (HISTORY_CURSOR < HISTORY.length - 1) {
+            HISTORY_CURSOR += 1;
+            const newLocal_1 = HISTORY[HISTORY_CURSOR];
+            setRule(newLocal_1);
+        }
+    }
+}
+
+/**
+ * @param {Rule} newRule
+ */
+function addToHistory(newRule) {
+    HISTORY.push(newRule);
+    if (HISTORY.length > MAX_HISTORY) {
+        HISTORY.splice(0, 1);
+    }
+    HISTORY_CURSOR = HISTORY.length - 1;
+}
+
+//#endregion
+
 //#region Setup
+
+// Window
+window.addEventListener('keydown', (event) => handleKeyPress(event))
 
 // Canvas
 const canvas = getElementAndSetListeners('canvas', HTMLCanvasElement, copyCanvasToClipboard);
@@ -1284,6 +1333,11 @@ const BOARD = new Board(CTX.canvas.width, CTX.canvas.height);
 /** @type {Rule} */
 let RULE = getRuleFromControls();
 
+const MAX_HISTORY = 100;
+/** @type {Rule[]} */
+const HISTORY = [RULE];
+let HISTORY_CURSOR = 0;
+
 let ANIMATING = false;
 // Note: In miliseconds
 /** @type {number | null} */
@@ -1298,5 +1352,6 @@ setRandomnessLabel();
 setColorVar(0);
 setColorVar(1);
 setColorVar(2);
+ruleTextboxChanged();
 render();
 //#endregion
