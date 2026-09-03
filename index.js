@@ -2,7 +2,49 @@
 
 
 //#region Helpers - Math
+class SeedableRNG {
+    /**
+     * @param {number} seed
+     */
+    constructor(seed) {
+        this.seed = seed;
+    }
 
+    random() {
+        let x = this.seed;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+
+        x = x % 1000000;
+        const float = Math.abs(x / 1000000);
+        console.log(float);
+        this.seed = x;
+        return float;
+    }
+
+    /**
+     * @param {number} min
+     * @param {number} max
+     */
+    randomRangeInt(min, max) {
+        return Math.floor(this.randomRange(min, max));
+    }
+
+    /**
+     * @param {number} min
+     * @param {number} max
+     */
+    randomRange(min, max) {
+        return this.random() * (max - min) + min;
+    }
+
+    randomNonzeroTrit() {
+        const trit = this.randomRangeInt(0, 2) + 1;
+        assertTrit(trit);
+        return trit;
+    }
+}
 
 /**
  * @typedef {[number, number, number]} Color
@@ -532,50 +574,54 @@ function initialize_board(board, rule, initial, boundary) {
  * @param {InitialCondition} initial
  */
 function populateRow(board, y, initial) {
+    const seed = getSeed();
+    const rng = new SeedableRNG(seed);
+
     const width = board.width;
 
-    /** @type {(arg0: number) => boolean} */
+    /** @type {(arg0: number) => [boolean, Cell]} */
     let rule;
     switch (initial) {
-        case "one_cell_on_center": rule = x => x == Math.floor(width / 2);
+        case "one_cell_on_center": rule = x => [x == Math.floor(width / 2), 1];
             break;
-        case "one_cell_on_left": rule = x => x == 0;
+        case "one_cell_on_left": rule = x => [x == 0, 1];
             break;
-        case "one_cell_on_right": rule = x => x == width - 1;
+        case "one_cell_on_right": rule = x => [x == width - 1, 1];
             break;
         case "one_cell_on_random": {
-            const cell = Math.floor(Math.random() * width);
-            rule = x => x == cell;
+            const cell = rng.randomRangeInt(0, width);
+            rule = x => [x == cell, 1];
             break;
         }
-        case "one_cell_off_center": rule = x => x != Math.floor(width / 2);
+        case "one_cell_off_center": rule = x => [x != Math.floor(width / 2), 1];
             break;
-        case "one_cell_off_left": rule = x => x != 0;
+        case "one_cell_off_left": rule = x => [x != 0, 1];
             break;
-        case "one_cell_off_right": rule = x => x != width - 1;
+        case "one_cell_off_right": rule = x => [x != width - 1, 1];
             break;
         case "one_cell_off_random": {
-            const cell = Math.floor(Math.random() * width);
-            rule = x => x != cell;
+            const cell = rng.randomRangeInt(0, width);
+            rule = x => [x != cell, 1];
             break;
         }
-        case "random_5": rule = _ => Math.random() < 0.25;
+        case "random_5": rule = _ => [rng.randomRange(0.0, 1.0) < 0.25, rng.randomNonzeroTrit()];
             break;
-        case "random_25": rule = _ => Math.random() < 0.05;
+        case "random_25": rule = _ => [rng.randomRange(0.0, 1.0) < 0.05, rng.randomNonzeroTrit()];
             break;
-        case "random_50": rule = _ => Math.random() < 0.50;
+        case "random_50": rule = _ => [rng.randomRange(0.0, 1.0) < 0.50, rng.randomNonzeroTrit()];
             break;
-        case "random_75": rule = _ => Math.random() < 0.75;
+        case "random_75": rule = _ => [rng.randomRange(0.0, 1.0) < 0.75, rng.randomNonzeroTrit()];
             break;
-        case "random_95": rule = _ => Math.random() < 0.95;
+        case "random_95": rule = _ => [rng.randomRange(0.0, 1.0) < 0.95, rng.randomNonzeroTrit()];
             break;
-        case "all_on": rule = _ => true;
+        case "all_on": rule = _ => [true, 1];
             break;
-        case "all_off": rule = _ => false;
+        case "all_off": rule = _ => [false, 1];
             break;
     }
     for (let x = 0; x < width; x++) {
-        const value = rule(x) ? 1 : 0;
+        const [result, cell] = rule(x);
+        const value = result ? cell : 0;
         board.setCell(x, y, value);
     }
 }
@@ -651,7 +697,7 @@ function injectRandomness(board, y, randomness_type, percent) {
     for (let x = 0; x < board.width; x++) {
         /** @type { Trit? } */
         let value = null;
-        if (Math.random() < percent) {
+        if (randomRange(0.0, 1.0) < percent) {
             switch (randomness_type) {
                 case "state_0": value = 0;
                     break;
@@ -1210,6 +1256,10 @@ function getRandomnessType() {
 }
 
 
+function getSeed() {
+    return parseInt(randomness_seed_input.value)
+}
+
 async function copyCanvasToClipboard() {
     canvas.toBlob(async (blob) => {
         if (!blob) {
@@ -1285,6 +1335,7 @@ const speed_input = getElementAndSetListeners('speed', HTMLInputElement, setSpee
 const randomness_input = getElementAndSetListeners('randomness-amount', HTMLInputElement, setRandomnessLabel);
 const randomize_if_boring_input = getTypedElementById('randomize-if-boring', HTMLInputElement);
 const randomness_type_dropdown = getElementAndSetListeners('randomness-type', HTMLSelectElement);
+const randomness_seed_input = getElementAndSetListeners('randomness-seed', HTMLInputElement, resetIfNotPlaying);
 
 // Rule Options
 const rule_input = getElementAndSetListeners('rule', HTMLInputElement, ruleTextboxChanged, resetIfNotPlaying);
