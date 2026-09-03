@@ -48,10 +48,17 @@
       <input type="range" id="randomness-amount" value="0.5" min="0" max="1" step="any">
 
       <label for="randomize-if-boring"
-             title="Automatically randomizes when the current row is all the same color">Auto-Randomize</label>
+             title="Automatically randomizes when the current row is all the same color">Auto-Randomize Rows</label>
       <input type="checkbox" id="randomize-if-boring">
 
       <h3>Rule Options</h3>
+      <label for="auto-mutate-rate" title="Automatically mutate the rule every N rows. 0 = Don't mutate">Auto-Mutate
+        Rule</label>
+      <input type="number" id="auto-mutate-rate" value="0">
+
+      <label for="mutate-amount" title="How many rules to mutate at once">Mutation Amount</label>
+      <input type="number" id="mutate-amount" value="1">
+
       <label for="randomize-colors-also" title="Randomizes color along with the rule">Also Randomize Colors</label>
       <input type="checkbox" id="randomize-colors-also">
 

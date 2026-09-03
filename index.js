@@ -437,22 +437,26 @@ class Rule {
         return new Rule(newShapes);
     }
 
-    mutate() {
+    /**
+     * @param {number} mutation_amount
+     */
+    mutate(mutation_amount) {
         /** @type {Map<Shape, Cell>} */
         const newShapes = new Map();
         for (const [shape, cell] of this.shapes.entries()) {
             newShapes.set(shape, cell);
         }
+        for (let i = 0; i < mutation_amount; i++) {
+            const i = randomRangeInt(0, newShapes.size);
+            const randomShape = [...newShapes.keys()][i];
 
-        const i = randomRangeInt(0, newShapes.size);
-        const randomShape = [...newShapes.keys()][i];
 
-
-        let newCell = randomTrit();
-        while (newCell == newShapes.get(randomShape)) {
-            newCell = randomTrit(); // force newCell to not be identical to the existing cell.
+            let newCell = randomTrit();
+            while (newCell == newShapes.get(randomShape)) {
+                newCell = randomTrit(); // force newCell to not be identical to the existing cell.
+            }
+            newShapes.set(randomShape, newCell);
         }
-        newShapes.set(randomShape, newCell);
 
         return new Rule(newShapes);
     }
@@ -787,7 +791,7 @@ function resetIfNotPlaying() {
  */
 function animationLoop(timestamp) {
     function shouldRandomizeRow() {
-        return ADD_RANDOMNESS || (randomize_if_boring_input.checked && bottomRowIsAllSame());
+        return RANDOMIZE_ROW || (randomize_if_boring_input.checked && bottomRowIsAllSame());
     }
 
     function bottomRowIsAllSame() {
@@ -815,6 +819,9 @@ function animationLoop(timestamp) {
             NEEDS_RESET = false;
             board.resetToSize(CTX.canvas.width, CTX.canvas.height);
             initialize_board(board, RULE, initial, boundary);
+
+            LAST_MUTATE = 0;
+            TOTAL_ROWS = 0;
         }
 
 
@@ -822,7 +829,7 @@ function animationLoop(timestamp) {
             const percent = getRandomnessAmount();
             const randomness_type = getRandomnessType();
             injectRandomness(board, board.height - 1, randomness_type, percent);
-            ADD_RANDOMNESS = false;
+            RANDOMIZE_ROW = false;
         }
 
         if (rowsToShift > 0) {
@@ -838,13 +845,20 @@ function animationLoop(timestamp) {
         const deltaTime = (timestamp - LAST_FRAME) / 1000;
         const rowsPerSecond = getRowsPerSecond();
         const rowsToShift = Math.floor(deltaTime * rowsPerSecond);
-
         if (rowsToShift > 0) {
+            const mutationRate = parseInt(auto_mutate_rate_input.value)
+            if (TOTAL_ROWS - LAST_MUTATE > mutationRate) {
+                mutateRule();
+                LAST_MUTATE = TOTAL_ROWS;
+            }
+
             updateBoard(BOARD, rowsToShift);
             renderBoard(CTX, BOARD);
 
             // Only record LAST_FRAME if we actually changed anything on the canvas.
             LAST_FRAME = timestamp;
+
+            TOTAL_ROWS += rowsToShift;
         }
 
         render();
@@ -949,7 +963,8 @@ function randomizeRule() {
 }
 
 function mutateRule() {
-    const newRule = RULE.mutate();
+    const mutationAmount = parseInt(mutate_amount_input.value);
+    const newRule = RULE.mutate(mutationAmount);
     setRule(newRule);
     addToHistory(newRule);
 }
@@ -1343,10 +1358,13 @@ const rule_diagram_template = getTypedElementById('rule-diagram', HTMLTemplateEl
 const boundary_dropdown = getElementAndSetListeners('boundary', HTMLSelectElement, resetIfNotPlaying);
 const initial_dropdown = getElementAndSetListeners('initial', HTMLSelectElement, resetCanvas);
 
+const auto_mutate_rate_input = getTypedElementById('auto-mutate-rate', HTMLInputElement);
+const mutate_amount_input = getTypedElementById('mutate-amount', HTMLInputElement);
+
 // Rule Options - Randomizations
 const randomize_colors_also_input = getTypedElementById('randomize-colors-also', HTMLInputElement);
 
-const _inject_randomness_button = getElementAndSetListeners('inject-randomness', HTMLButtonElement, () => ADD_RANDOMNESS = true);
+const _inject_randomness_button = getElementAndSetListeners('inject-randomness', HTMLButtonElement, () => RANDOMIZE_ROW = true);
 const _randomize_rule_button = getElementAndSetListeners('randomize-rule', HTMLButtonElement, randomizeRule);
 const _mutate_rule_button = getElementAndSetListeners('mutate-rule', HTMLButtonElement, mutateRule);
 const _flip_rule_button = getElementAndSetListeners('flip-rule', HTMLButtonElement, flipRule);
@@ -1393,8 +1411,10 @@ let ANIMATING = false;
 // Note: In miliseconds
 /** @type {number | null} */
 let LAST_FRAME = null;
-let ADD_RANDOMNESS = false;
+let RANDOMIZE_ROW = false;
 let NEEDS_RESET = true;
+let LAST_MUTATE = 0;
+let TOTAL_ROWS = 0;
 
 resetCanvas();
 applyControls();
