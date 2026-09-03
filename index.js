@@ -847,7 +847,7 @@ function animationLoop(timestamp) {
         const rowsToShift = Math.floor(deltaTime * rowsPerSecond);
         if (rowsToShift > 0) {
             const mutationRate = parseInt(auto_mutate_rate_input.value)
-            if (TOTAL_ROWS - LAST_MUTATE > mutationRate) {
+            if (mutationRate > 0 && TOTAL_ROWS - LAST_MUTATE > mutationRate) {
                 mutateRule();
                 LAST_MUTATE = TOTAL_ROWS;
             }
