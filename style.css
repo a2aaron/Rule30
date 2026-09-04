@@ -1,3 +1,9 @@
+:root {
+    --state-0-color: black;
+    --state-1-color: white;
+    --state-2-color: red;
+}
+
 main {
     display: grid;
     grid-template-columns: fit-content(0) fit-content(0);
@@ -40,46 +46,48 @@ ui-grid {
         width: fit-content;
     }
 
-    rule-diagrams {
-        grid-column: 1 / -1;
-
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        row-gap: 1.5em;
-        justify-items: center;
-        
-        border: 1px solid black;
-        padding-top: 1.5em;
-        padding-bottom: 1em;
-   
-        rule-diagram {
-            display: grid;
-            grid-template-columns: auto auto auto;
-
-            gap: 0.2em;
-            rule-box, rule-input {
-                display: block;
-                border: black 1px solid;
-                width: 1em;
-                height: 1em;
-            }
-            rule-input {
-                grid-column: 2 / 2;
-            }
-            [data-state="0"] { background-color: var(--state-0-color); }
-            [data-state="1"] { background-color: var(--state-1-color); }
-            [data-state="2"] { background-color: var(--state-2-color); }
-        }
-    }
-
     .narrow-input { width: 8ch; }
 }
 
-:root {
-    --state-0-color: black;
-    --state-1-color: white;
-    --state-2-color: red;
+rule-diagrams {
+    grid-column: 1 / -1;
+
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    row-gap: 1.5em;
+    justify-items: center;
+
+    border: 1px solid black;
+    padding-top: 1.5em;
+    padding-bottom: 1em;
+
 }
+rule-diagram {
+    display: inline-grid;
+    grid-template-columns: auto auto auto;
+    vertical-align: middle;
+
+    gap: 0.2em;
+    width: fit-content;
+    
+    rule-input {
+        grid-column: 2 / 2;
+    }
+}
+
+
+rule-box, rule-input {
+    display: inline-block;
+    vertical-align: middle;
+    
+    border: black 1px solid;
+    width: 1em;
+    height: 1em;
+    &[data-state="0"] { background-color: var(--state-0-color); }
+    &[data-state="1"] { background-color: var(--state-1-color); }
+    &[data-state="2"] { background-color: var(--state-2-color); }
+}
+
 
 #copied-to-clipboard-message {
     color: black;

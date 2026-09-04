@@ -15,6 +15,154 @@
     <div>
       <canvas id="canvas" height="800" width="800" tabindex="1"></canvas>
       <p id="copied-to-clipboard-message">Copied to clipboard</p>
+      <section>
+        <h2>Introduction</h2>
+        <p>Rule 30 is a toy for exploring <a href="https://en.wikipedia.org/wiki/Cellular_automaton">1D cellular
+            automata</a>.
+          It simulates a 3-state cellular automata. Each pixel of the canvas on the left represents a "cell".
+          The color of the cell is determined by the three cells above it (the cell immediately above it,
+          the cell above and to the left, and the cel above and to the right).</p>
+
+        <p>
+          Assuming you are using the default settings, the first row will be look something like this:
+        </p>
+        <rule-row>
+          <rule-box data-state="0"></rule-box>
+          <rule-box data-state="0"></rule-box>
+          <rule-box data-state="0"></rule-box>
+          <rule-box data-state="1"></rule-box>
+          <rule-box data-state="0"></rule-box>
+          <rule-box data-state="0"></rule-box>
+          <rule-box data-state="0"></rule-box>
+        </rule-row>
+
+        <p>The next row is then computed by looking at groups of 3 cells in the first row. For example, we see that the
+          middle cell in the next row would have <rule-box data-state="0"></rule-box> on the left, <rule-box
+                    data-state="1"></rule-box> in the center,
+          and <rule-box data-state="0"></rule-box> on the right. From this, we would look up the appropriate rule in the
+          rules diagram on the right. Let's say it's this:
+        </p>
+        <rule-diagram>
+          <rule-box data-state="0"></rule-box>
+          <rule-box data-state="1"></rule-box>
+          <rule-box data-state="0"></rule-box>
+          <rule-input data-state="2"></rule-box>
+        </rule-diagram>
+
+        <p>
+          Then the next row would have <rule-input data-state="2"></rule-input> in the center. This process repeats for
+          every cell in the next row, and then every cell in the row after that, and so on, until the whole canvas is
+          filled up.
+        </p>
+
+        <h2>Controls</h2>
+        <h3>Animation Options</h3>
+        <ul>
+          <li>Play - Starts or stops the scrolling. You can also press spacebar to do this.</li>
+          <li>Reset - Resets the canvas to the initial state.</li>
+          <li>Speed - Controls how fast the canvas scrolls in rows per second.</li>
+          <li>Auto-Mutate Rule - Automatically clicks "Mutate" every X rows that are scrolled. Set to 0 to turn off.
+          </li>
+          <li>Auto-Randomize Rows - Automatically clicks "Randomize Row" if the bottom row is all the same color</li>
+
+        </ul>
+
+        <h3>Rule Options</h3>
+        <ul>
+          <li>Randomize Rule - Pick a new random rule</li>
+          <li>Mutate Rule - Modify the current rule. The amount it is modified by is controled by "Mutation Amount"</li>
+          <li>Flip - Changes the rule to its mirrored version. For example,
+            <rule-diagram>
+              <rule-box data-state="0"></rule-box>
+              <rule-box data-state="1"></rule-box>
+              <rule-box data-state="2"></rule-box>
+              <rule-input data-state="0"></rule-input>
+            </rule-diagram>
+            becomes
+            <rule-diagram>
+              <rule-box data-state="2"></rule-box>
+              <rule-box data-state="1"></rule-box>
+              <rule-box data-state="0"></rule-box>
+              <rule-input data-state="0"></rule-input>
+            </rule-diagram>
+          </li>
+          <li>Complement - Changes the rule to its complementary rule. This is the same as replacing each state's color.
+            For example,
+            <rule-diagram>
+              <rule-box data-state="0"></rule-box>
+              <rule-box data-state="1"></rule-box>
+              <rule-box data-state="2"></rule-box>
+              <rule-input data-state="0"></rule-input>
+            </rule-diagram>
+            becomes
+            <rule-diagram>
+              <rule-box data-state="1"></rule-box>
+              <rule-box data-state="2"></rule-box>
+              <rule-box data-state="0"></rule-box>
+              <rule-input data-state="1"></rule-input>
+            </rule-diagram>
+          </li>
+          <li>Cycle - Cycles the output cell of each rule. This is the same clicking on each rule once. For example,
+            <rule-diagram>
+              <rule-box data-state="0"></rule-box>
+              <rule-box data-state="1"></rule-box>
+              <rule-box data-state="2"></rule-box>
+              <rule-input data-state="0"></rule-input>
+            </rule-diagram>
+            becomes
+            <rule-diagram>
+              <rule-box data-state="0"></rule-box>
+              <rule-box data-state="1"></rule-box>
+              <rule-box data-state="2"></rule-box>
+              <rule-input data-state="1"></rule-input>
+            </rule-diagram>
+          </li>
+          <li>Also Randomize Colors - If checked, randomizes the colors when clicking "Randomize Rule"</li>
+          <li>Mutation Amount - Amount to change the rule when "Mutate" is clicked</li>
+          <li>Rule - The currently applied rule, represented as number. See below for specifics</li>
+          <li>Initial Row - How to populate the very first row. There's a bunch of options, such as making all the cells
+            be <rule-box data-state="0"></rule-box>, except for the center cell which is
+            <rule-box data-state="1"></rule-box>, as well as setting the initial row to be a random pattern.
+          </li>
+          <li>Boundary - How to handle the edges of the image. Options are to wrap around (leftmost and rightmost cells
+            are considered next to each other), treat as always Off (so the edges are always <rule-box
+                      data-state="0"></rule-box>) or treat as always On (so the edges are always <rule-box
+                      data-state="1"></rule-box>).</li>
+          <li>Show / Hide Rules - Shows or hides the rule diagram, which gives a more detailed view at the current rule
+          </li>
+        </ul>
+
+        <h3>Randomization Options</h3>
+        <ul>
+          <li>Randomize Row - Modifies the bottom row of the canvas while it is scrolling. This can introduce new,
+            interesting patterns to the canvas.</li>
+          <li>Chance - Chance to modify a cell</li>
+          <li>Randomness Type - How to randomize the bottom row. "Set State X" will randomly change cells to that state.
+            Replace will update every cell to a random state, and cycle will randoly change cells to the next state</li>
+          <li>Seed - RNG seed to use when randomizing</li>
+        </ul>
+
+        <h3>Canvas Options</h3>
+        <ul>
+          <li>Randomize Colors - Randomize the colors for each state.</li>
+          <li>State 0/1/2 Color - Pick the color for each state. The randomize button next to it can also be used to
+            randomize that particular color.</li>
+          <li>Internal Size - The internal size of the canvas. This determines the actual number of cells per row and
+            row many rows to display. Set this lower if you are having performance issues</li>
+          <li>External Size - The displayed size of the canvas. This doesn't affect performance</li>
+          <li>Lock Internal Size to External Size - Makes the external size and internal size always equal</li>
+          <li>Lock External Size to square aspect ration - Makes the width and height for External Size always equal
+          </li>
+        </ul>
+
+        <h3>Other Controls</h3>
+        <p>You can click the canvas to take a screenshot of the current image on the canvas. This is saved to your
+          clipboard.
+        </p>
+        <p>You can use the left and right arrow keys to go back to a previous rule. The history only goes back 100
+          steps.
+        </p>
+      </section>
     </div>
     <ui-grid>
       <h3>Animation Options</h3>
@@ -23,66 +171,36 @@
         <button id="reset">Reset</button>
       </ui-row>
 
-      <label id="speed-label" for="speed" title="Sets the rows per second">Speed</label>
+      <label for="speed" title="Sets the rows per second">Speed (<span id="speed-label"></span>)</label>
       <input type="range" id="speed" value="0.5" min="0" max="1" step="any">
 
-      <h3>Randomization Options</h3>
-      <ui-row>
-        <button id="inject-randomness">Randomize Row</button>
-      </ui-row>
+      <label for="auto-mutate-rate" title="Automatically mutate the rule every N rows. 0 = Don't mutate">Auto-Mutate
+        Rule</label>
+      <input type="number" id="auto-mutate-rate" value="0">
 
-      <label for="randomness-seed" title="Sets the RNG seed">Seed</label>
-      <input id="randomness-seed" type="number" value="42">
-
-      <label for="randomness-type" title="Sets the randomness type">Randomness Type</label>
-      <select id="randomness-type">
-        <option value="state_0">Set State 0</option>
-        <option value="state_1">Set State 1</option>
-        <option value="state_2">Set State 2</option>
-        <option value="replace">Replace</option>
-        <option value="cycle">Cycle</option>
-      </select>
-
-      <label id="randomness-label" for="randomness-amount"
-             title="Sets the percent of cells to randomy turn on">Randomness</label>
-      <input type="range" id="randomness-amount" value="0.5" min="0" max="1" step="any">
 
       <label for="randomize-if-boring"
              title="Automatically randomizes when the current row is all the same color">Auto-Randomize Rows</label>
       <input type="checkbox" id="randomize-if-boring">
 
+      <label for="randomness-seed" title="Sets the RNG seed">Seed</label>
+      <input id="randomness-seed" type="number" value="42">
+
       <h3>Rule Options</h3>
-      <label for="auto-mutate-rate" title="Automatically mutate the rule every N rows. 0 = Don't mutate">Auto-Mutate
-        Rule</label>
-      <input type="number" id="auto-mutate-rate" value="0">
-
-      <label for="mutate-amount" title="How many rules to mutate at once">Mutation Amount</label>
-      <input type="number" id="mutate-amount" value="1">
-
-      <label for="randomize-colors-also" title="Randomizes color along with the rule">Also Randomize Colors</label>
-      <input type="checkbox" id="randomize-colors-also">
-
       <ui-row>
-        <button id="randomize-rule">Randomize</button>
+        <button id="randomize-rule">Randomize Rule</button>
         <button id="mutate-rule">Mutate</button>
         <button id="flip-rule">Flip</button>
         <button id="complement-rule">Complement</button>
         <button id="cycle-rule">Cycle</button>
       </ui-row>
-      <template id="rule-diagram">
-        <rule-diagram>
-          <rule-box></rule-box>
-          <rule-box></rule-box>
-          <rule-box></rule-box>
-          <rule-input></rule-input>
-          </checkbox-caption>
-      </template>
-      <ui-row>
-        <details open="true">
-          <summary>Show / Hide Rules</summary>
-          <rule-diagrams></rule-diagrams>
-        </details>
-      </ui-row>
+      <label for="randomize-colors-also" title="Randomizes color along with the rule">Also Randomize Colors</label>
+      <input type="checkbox" id="randomize-colors-also">
+      <label for="mutate-amount" title="How many rules to mutate at once">Mutation Amount</label>
+      <input type="number" id="mutate-amount" value="1">
+
+      <br />
+      <dummy-div></dummy-div>
 
       <label for="rule" title="Sets the CA rule">Rule</label>
       <input type="number" id="rule" value="30">
@@ -113,6 +231,40 @@
         <option value="on">Assume On</option>
       </select>
 
+
+      <template id="rule-diagram">
+        <rule-diagram>
+          <rule-box></rule-box>
+          <rule-box></rule-box>
+          <rule-box></rule-box>
+          <rule-input></rule-input>
+          </checkbox-caption>
+      </template>
+      <ui-row>
+        <details open="true">
+          <summary>Show / Hide Rules</summary>
+          <rule-diagrams></rule-diagrams>
+        </details>
+      </ui-row>
+
+      <h3>Randomization Options</h3>
+      <ui-row>
+        <button id="inject-randomness">Randomize Row</button>
+      </ui-row>
+
+      <label for="randomness-amount" title="Sets the percent of cells to randomy turn on">Chance (<span
+              id="randomness-label"></span>)</label>
+      <input type="range" id="randomness-amount" value="0.5" min="0" max="1" step="any">
+
+      <label for="randomness-type" title="Sets the randomness type">Randomness Type</label>
+      <select id="randomness-type">
+        <option value="state_0">Set State 0</option>
+        <option value="state_1">Set State 1</option>
+        <option value="state_2">Set State 2</option>
+        <option value="replace">Replace</option>
+        <option value="cycle">Cycle</option>
+      </select>
+
       <h3>Canvas Options</h3>
       <button id="randomize-all-colors">Randomize Colors</button>
 
@@ -134,20 +286,12 @@
         <button id="randomize-color-state-2">Randomize</button>
       </ui-group>
 
-      <label for="lock-internal-size" title="If checked, locks the internal size to the external size">Lock
-        internal size</label>
-      <input type="checkbox" id="lock-internal-size">
-
       <label title="Sets the internal size">Internal Size</label>
       <ui-group>
         <input type="number" id="internal-width" value="300" min="1" max="9999" class="narrow-input">
         x
         <input type="number" id="internal-height" value="300" min="1" max="9999" class="narrow-input">
       </ui-group>
-
-      <label for="lock-aspect-ratio" title="If checked, locks the aspect ratio of the external size to be a square">Lock
-        aspect ratio</label>
-      <input type="checkbox" id="lock-aspect-ratio" checked="true">
 
       <label for="external-width" title="Sets the external size">External Size</label>
       <ui-group>
@@ -156,14 +300,14 @@
         <input type="number" id="external-height" value="900" min="1" max="9999" class="narrow-input">
       </ui-group>
 
+      <label for="lock-internal-size" title="If checked, locks the internal size to the external size">Lock Internal
+        Size to External Size</label>
+      <input type="checkbox" id="lock-internal-size">
+
+      <label for="lock-aspect-ratio" title="If checked, locks the aspect ratio of the external size to be a square">Lock
+        External Size to square aspect ratio</label>
+      <input type="checkbox" id="lock-aspect-ratio" checked="true">
+
     </ui-grid>
-    <section>
-      <h2>Info</h2>
-      <p>Rule 30 is a toy for exploring <a href="https://en.wikipedia.org/wiki/Cellular_automaton">1D cellular
-          automata</a>.
-        It simulates a 3-state cellular automata with a variety of options. You can control the </p>
-      <p>Use space bar to automatically start scrolling or stopping the canvas.</p>
-      <p>Use the left and right arrow keys to go back to a previous rule. The history only goes back 100 steps.</p>
-    </section>
   </main>
 </body>

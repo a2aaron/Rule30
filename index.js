@@ -1189,16 +1189,16 @@ function setExternalCanvasSize() {
 
 
 function setSpeedLabel() {
-    const speedLabel = getTypedElementById("speed-label", HTMLLabelElement);
+    const speedLabel = getTypedElementById("speed-label", HTMLSpanElement);
     const rowsPerSecond = getRowsPerSecond();
-    speedLabel.textContent = `Speed (${rowsPerSecond.toFixed(0)})`
+    speedLabel.textContent = `${rowsPerSecond.toFixed(0)}`
 }
 
 function setRandomnessLabel() {
-    const randomnessLabel = getTypedElementById("randomness-label", HTMLLabelElement);
+    const randomnessLabel = getTypedElementById("randomness-label", HTMLSpanElement);
     const randomness = getRandomnessAmount() * 100;
     const label = randomness < 10 ? randomness.toFixed(1) : randomness.toFixed(0);
-    randomnessLabel.textContent = `Randomness (${label}%)`
+    randomnessLabel.textContent = `${label}%`
 }
 
 
@@ -1374,7 +1374,7 @@ const _cycle_rule_button = getElementAndSetListeners('cycle-rule', HTMLButtonEle
 // Canvas Options - Canvas Size
 const internal_width_input = getElementAndSetListeners('internal-width', HTMLInputElement, applyControls);
 const internal_height_input = getElementAndSetListeners('internal-height', HTMLInputElement, applyControls, setSpeedLabel);
-const lock_internal_size_input = getElementAndSetListeners('lock-internal-size', HTMLInputElement, setSpeedLabel);
+const lock_internal_size_input = getElementAndSetListeners('lock-internal-size', HTMLInputElement, applyControls, setSpeedLabel);
 const external_width_input = getElementAndSetListeners('external-width', HTMLInputElement, applyControls);
 const external_height_input = getElementAndSetListeners('external-height', HTMLInputElement, applyControls);
 const lock_aspect_ratio_input = getElementAndSetListeners('lock-aspect-ratio', HTMLInputElement, applyControls);
