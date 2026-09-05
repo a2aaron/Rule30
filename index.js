@@ -893,7 +893,7 @@ function stopAnimationLoop() {
 //#region Controls - Rule Controls
 
 function createRuleDiagrams() {
-    const rule_diagrams_element = unwrap(document.querySelector("rule-diagrams"));
+    const rule_diagrams_element = unwrap(document.querySelector("rule-diagrams#real-rule-diagrams"));
     const rule_inputs = [];
 
     for (let i = 0; i < NUM_RULE_CHECKBOXES; i++) {

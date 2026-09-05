@@ -162,6 +162,74 @@
         <p>You can use the left and right arrow keys to go back to a previous rule. The history only goes back 100
           steps.
         </p>
+        <h2>How the Rule Number Works</h2>
+        <p>In the <a href="https://en.wikipedia.org/wiki/Elementary_cellular_automaton">elementary cellular
+            automaton</a>, each cell has only two states, on or off and the next cell in a row is computed by looking at
+          the above 3 cells. Hence, this give rise to 256 different rules. Normally, the rules are numbered so that when
+          a
+          rule's number is written out in binary, each bit in the number corresponds to whether or not a given shape of
+          cells makes the cell in the next row turn on or off. For example, <a
+             href="https://en.wikipedia.org/wiki/Rule_30">Rule 30</a>
+          in binary is <code>0 0 0 1 1 1 1 0</code>. This matches up to how it's rules are defined (Here, <code>0</code>
+          means <rule-box data-state="0"></rule-box> and <code>1</code> means <rule-box data-state="1"></rule-box>):
+          <rule-diagrams data-columns="8">
+            <rule-diagram>
+              <rule-box data-state="1"></rule-box>
+              <rule-box data-state="1"></rule-box>
+              <rule-box data-state="1"></rule-box>
+              <rule-input data-state="0"></rule-box>
+            </rule-diagram>
+            <rule-diagram>
+              <rule-box data-state="1"></rule-box>
+              <rule-box data-state="1"></rule-box>
+              <rule-box data-state="0"></rule-box>
+              <rule-input data-state="0"></rule-box>
+            </rule-diagram>
+            <rule-diagram>
+              <rule-box data-state="1"></rule-box>
+              <rule-box data-state="0"></rule-box>
+              <rule-box data-state="1"></rule-box>
+              <rule-input data-state="0"></rule-box>
+            </rule-diagram>
+            <rule-diagram>
+              <rule-box data-state="1"></rule-box>
+              <rule-box data-state="0"></rule-box>
+              <rule-box data-state="0"></rule-box>
+              <rule-input data-state="1"></rule-box>
+            </rule-diagram>
+            <rule-diagram>
+              <rule-box data-state="0"></rule-box>
+              <rule-box data-state="1"></rule-box>
+              <rule-box data-state="1"></rule-box>
+              <rule-input data-state="1"></rule-box>
+            </rule-diagram>
+            <rule-diagram>
+              <rule-box data-state="0"></rule-box>
+              <rule-box data-state="1"></rule-box>
+              <rule-box data-state="0"></rule-box>
+              <rule-input data-state="1"></rule-box>
+            </rule-diagram>
+            <rule-diagram>
+              <rule-box data-state="0"></rule-box>
+              <rule-box data-state="0"></rule-box>
+              <rule-box data-state="1"></rule-box>
+              <rule-input data-state="1"></rule-box>
+            </rule-diagram>
+            <rule-diagram>
+              <rule-box data-state="0"></rule-box>
+              <rule-box data-state="0"></rule-box>
+              <rule-box data-state="0"></rule-box>
+              <rule-input data-state="0"></rule-box>
+            </rule-diagram>
+          </rule-diagrams>
+        </p>
+        <p>For this toy, we have 3 states, so instead of binary, we write out the number in trinary (base-3). Since
+          there's 3 input cells, each with 3 possible options, there will be <code>3*3*3 = 27</code> trinary digits for
+          our rule number. That means there <code>3^27 = 7,625,597,484,987</code> possible rules!
+        </p>
+        <p>This is also why the default rule number is 19,794 instead of 30 (it's the equivalent rule where we just
+          ignore the 3rd state. Well, technically there's millions of similar such rules, but 19,794 is the smallest of
+          these numerically)</p>
       </section>
     </div>
     <ui-grid>
@@ -203,7 +271,7 @@
       <dummy-div></dummy-div>
 
       <label for="rule" title="Sets the CA rule">Rule</label>
-      <input type="number" id="rule" value="30">
+      <input type="number" id="rule" value="19794">
 
       <label for="inital" title="Sets the initial conditions">Initial Row</label>
       <select id="initial">
@@ -243,7 +311,7 @@
       <ui-row>
         <details open="true">
           <summary>Show / Hide Rules</summary>
-          <rule-diagrams></rule-diagrams>
+          <rule-diagrams id="real-rule-diagrams" data-columns="3"></rule-diagrams>
         </details>
       </ui-row>
 

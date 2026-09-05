@@ -53,15 +53,16 @@ rule-diagrams {
     grid-column: 1 / -1;
 
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(attr(data-columns type(<integer>), 3), 1fr);
     row-gap: 1.5em;
     justify-items: center;
 
     border: 1px solid black;
     padding-top: 1.5em;
     padding-bottom: 1em;
-
+    margin: 0.5em;
 }
+
 rule-diagram {
     display: inline-grid;
     grid-template-columns: auto auto auto;
