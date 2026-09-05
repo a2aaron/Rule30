@@ -53,7 +53,6 @@ rule-diagrams {
     grid-column: 1 / -1;
 
     display: grid;
-    grid-template-columns: repeat(attr(data-columns type(<integer>), 3), 1fr);
     row-gap: 1.5em;
     justify-items: center;
 
@@ -61,6 +60,9 @@ rule-diagrams {
     padding-top: 1.5em;
     padding-bottom: 1em;
     margin: 0.5em;
+
+    &[data-columns="3"] { grid-template-columns: repeat(3, 1fr) }
+    &[data-columns="8"] { grid-template-columns: repeat(8, 1fr) }
 }
 
 rule-diagram {
