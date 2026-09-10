@@ -941,6 +941,7 @@ function setRuleControls(rule) {
         const cell = rule.getByRuleBoxIndex(i);
         setRuleBox(i, cell);
     }
+    setPermalink();
 }
 
 /**
@@ -1329,6 +1330,52 @@ function addToHistory(newRule) {
 
 //#endregion
 
+//#region Permalink
+function setPermalink() {
+    const url = new URL(window.location.href);
+    url.search = "";
+    url.searchParams.append("rule", getNumericRule().toString());
+    url.searchParams.append("seed", getSeed().toString());
+    url.searchParams.append("boundary", getBoundaryCondition());
+    url.searchParams.append("initial", getInitialCondition());
+    url.searchParams.append("color0", color_state_0_input.value);
+    url.searchParams.append("color1", color_state_1_input.value);
+    url.searchParams.append("color2", color_state_2_input.value);
+    url.searchParams.append("internal_width", internal_width_input.value);
+    url.searchParams.append("internal_height", internal_height_input.value);
+    url.searchParams.append("external_width", external_width_input.value);
+    url.searchParams.append("external_height", external_height_input.value);
+
+    permalink_textarea.value = url.toString();
+}
+
+function setControlsFromPermalink() {
+    /**
+     * @param {string} name
+     * @param {HTMLInputElement | HTMLSelectElement} controlToSet
+     */
+    function trySet(name, controlToSet) {
+        const value = url.searchParams.get(name);
+        if (value != null) {
+            controlToSet.value = value;
+        }
+    }
+
+    const url = new URL(window.location.href);
+    trySet("rule", rule_input);
+    trySet("seed", randomness_seed_input);
+    trySet("boundary", boundary_dropdown);
+    trySet("initial", initial_dropdown);
+    trySet("color0", color_state_0_input);
+    trySet("color1", color_state_1_input);
+    trySet("color2", color_state_2_input);
+    trySet("internal_width", internal_width_input);
+    trySet("internal_height", internal_height_input);
+    trySet("external_width", external_width_input);
+    trySet("external_height", external_height_input);
+}
+//#endregion
+
 //#region Setup
 
 // Window
@@ -1350,13 +1397,13 @@ const speed_input = getElementAndSetListeners('speed', HTMLInputElement, setSpee
 const randomness_input = getElementAndSetListeners('randomness-amount', HTMLInputElement, setRandomnessLabel);
 const randomize_if_boring_input = getTypedElementById('randomize-if-boring', HTMLInputElement);
 const randomness_type_dropdown = getElementAndSetListeners('randomness-type', HTMLSelectElement);
-const randomness_seed_input = getElementAndSetListeners('randomness-seed', HTMLInputElement, resetIfNotPlaying);
+const randomness_seed_input = getElementAndSetListeners('randomness-seed', HTMLInputElement, resetIfNotPlaying, setPermalink);
 
 // Rule Options
-const rule_input = getElementAndSetListeners('rule', HTMLInputElement, ruleTextboxChanged, resetIfNotPlaying);
+const rule_input = getElementAndSetListeners('rule', HTMLInputElement, ruleTextboxChanged, resetIfNotPlaying, setPermalink);
 const rule_diagram_template = getTypedElementById('rule-diagram', HTMLTemplateElement);
-const boundary_dropdown = getElementAndSetListeners('boundary', HTMLSelectElement, resetIfNotPlaying);
-const initial_dropdown = getElementAndSetListeners('initial', HTMLSelectElement, resetCanvas);
+const boundary_dropdown = getElementAndSetListeners('boundary', HTMLSelectElement, resetIfNotPlaying, setPermalink);
+const initial_dropdown = getElementAndSetListeners('initial', HTMLSelectElement, resetCanvas, setPermalink);
 
 const auto_mutate_rate_input = getTypedElementById('auto-mutate-rate', HTMLInputElement);
 const mutate_amount_input = getTypedElementById('mutate-amount', HTMLInputElement);
@@ -1372,24 +1419,26 @@ const _completement_rule_button = getElementAndSetListeners('complement-rule', H
 const _cycle_rule_button = getElementAndSetListeners('cycle-rule', HTMLButtonElement, cycleRule);
 
 // Canvas Options - Canvas Size
-const internal_width_input = getElementAndSetListeners('internal-width', HTMLInputElement, applyControls);
-const internal_height_input = getElementAndSetListeners('internal-height', HTMLInputElement, applyControls, setSpeedLabel);
+const internal_width_input = getElementAndSetListeners('internal-width', HTMLInputElement, applyControls, setPermalink);
+const internal_height_input = getElementAndSetListeners('internal-height', HTMLInputElement, applyControls, setSpeedLabel, setPermalink);
 const lock_internal_size_input = getElementAndSetListeners('lock-internal-size', HTMLInputElement, applyControls, setSpeedLabel);
-const external_width_input = getElementAndSetListeners('external-width', HTMLInputElement, applyControls);
-const external_height_input = getElementAndSetListeners('external-height', HTMLInputElement, applyControls);
+const external_width_input = getElementAndSetListeners('external-width', HTMLInputElement, applyControls, setPermalink);
+const external_height_input = getElementAndSetListeners('external-height', HTMLInputElement, applyControls, setPermalink);
 const lock_aspect_ratio_input = getElementAndSetListeners('lock-aspect-ratio', HTMLInputElement, applyControls);
 
 // Canvas Options - Randomize Colors
-const _randomize_both_colors_button = getElementAndSetListeners('randomize-all-colors', HTMLButtonElement, () => { randomizeAllColors(); render(); });
-const _randomize_state_0_color_button = getElementAndSetListeners('randomize-color-state-0', HTMLButtonElement, () => { randomizeColorPicker(0); render(); });
-const _randomize_state_1_color_button = getElementAndSetListeners('randomize-color-state-1', HTMLButtonElement, () => { randomizeColorPicker(1); render(); });
-const _randomize_state_2_color_button = getElementAndSetListeners('randomize-color-state-2', HTMLButtonElement, () => { randomizeColorPicker(2); render(); });
+const _randomize_both_colors_button = getElementAndSetListeners('randomize-all-colors', HTMLButtonElement, () => { randomizeAllColors(); render(); setPermalink(); });
+const _randomize_state_0_color_button = getElementAndSetListeners('randomize-color-state-0', HTMLButtonElement, () => { randomizeColorPicker(0); render(); setPermalink(); });
+const _randomize_state_1_color_button = getElementAndSetListeners('randomize-color-state-1', HTMLButtonElement, () => { randomizeColorPicker(1); render(); setPermalink(); });
+const _randomize_state_2_color_button = getElementAndSetListeners('randomize-color-state-2', HTMLButtonElement, () => { randomizeColorPicker(2); render(); setPermalink(); });
 
 // Canvas Options - Colorpickers
-const color_state_0_input = getElementAndSetListeners('color-state-0', HTMLInputElement, () => { setColorVar(0); render(); });
-const color_state_1_input = getElementAndSetListeners('color-state-1', HTMLInputElement, () => { setColorVar(1); render(); });
-const color_state_2_input = getElementAndSetListeners('color-state-2', HTMLInputElement, () => { setColorVar(2); render(); });
+const color_state_0_input = getElementAndSetListeners('color-state-0', HTMLInputElement, () => { setColorVar(0); render(); setPermalink(); });
+const color_state_1_input = getElementAndSetListeners('color-state-1', HTMLInputElement, () => { setColorVar(1); render(); setPermalink(); });
+const color_state_2_input = getElementAndSetListeners('color-state-2', HTMLInputElement, () => { setColorVar(2); render(); setPermalink(); });
 
+// Permalink
+const permalink_textarea = getTypedElementById('permalink', HTMLTextAreaElement);
 
 const NUM_RULE_CHECKBOXES = 27;
 
@@ -1416,6 +1465,7 @@ let NEEDS_RESET = true;
 let LAST_MUTATE = 0;
 let TOTAL_ROWS = 0;
 
+setControlsFromPermalink();
 resetCanvas();
 applyControls();
 setSpeedLabel();
@@ -1425,4 +1475,5 @@ setColorVar(1);
 setColorVar(2);
 ruleTextboxChanged();
 render();
+setPermalink();
 //#endregion

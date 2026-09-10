@@ -46,6 +46,9 @@ ui-grid {
         width: fit-content;
     }
 
+    textarea {
+        grid-column: 1 / -1;
+    }
     .narrow-input { width: 8ch; }
 }
 
