@@ -1184,8 +1184,10 @@ function setInternalCanvasSize() {
 }
 
 function setExternalCanvasSize() {
-    CTX.canvas.style.width = `${external_width_input.value}px`;
+    const external_width = `${external_width_input.value}px`;
+    CTX.canvas.style.width = external_width;
     CTX.canvas.style.height = `${external_height_input.value}px`;
+    document.documentElement.style.setProperty(`--canvas-width`, external_width);
 }
 
 
